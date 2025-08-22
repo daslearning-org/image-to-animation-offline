@@ -1,0 +1,5 @@
+kivymd==1.2.0
+kivy[base]==2.3.1
+numpy
+opencv-python
+ffpyplayer
