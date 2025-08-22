@@ -4,7 +4,8 @@ An open-source, cross-platform, offline app for Android, Linux, Windows, Mac & i
 > Overview: The app uses KivyMD and Kivy mainly for the UI. The app uses `Numpy` & `OpenCV` as the logic backbone which generates the video from an image.
 
 ## 📽️ Demo
-Coming soon...
+You can click on the below Image or this [Youtube Link](https://www.youtube.com/watch?v=_UuAIjSzUJQ) to see the demo. Please let me know in the comments, how do you feel about this App. <br>
+[![ImageToSketch](./docs/images/thumb.png)](https://www.youtube.com/watch?v=_UuAIjSzUJQ)
 
 ## 🖧 Our Scematic Architecture
 To be added...

@@ -31,7 +31,7 @@ from screens.divider import MyMDDivider
 from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
-__version__ = "0.0.14"
+__version__ = "0.1.0"
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
     # Running as a PyInstaller bundle
@@ -399,7 +399,7 @@ class DlImg2SktchApp(MDApp):
         self.open_link("https://github.com/daslearning-org/image-to-animation-offline/releases")
 
     def open_demo_video(self):
-        self.open_link("https://youtube.com/playlist?list=PL7ZAVvBwIkXYJPUA3Wvkykk0u7DYWO3OI") # actual link to be updated
+        self.open_link("https://youtu.be/_UuAIjSzUJQ")
 
     def open_link(self, url):
         import webbrowser
