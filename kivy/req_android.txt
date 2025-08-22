@@ -1,0 +1,10 @@
+kivymd==1.2.0
+kivy[base]==2.3.1
+buildozer
+Cython==0.29.33
+numpy
+opencv-python
+ffpyplayer
+
+#numpy==1.26.4
+#opencv-python==4.5.1.48

@@ -1,0 +1,200 @@
+#:import MDScreen kivymd.uix.screen.MDScreen
+#:import MDGridLayout kivymd.uix.gridlayout.MDGridLayout
+#:import MDLabel kivymd.uix.label.MDLabel
+#:import MDTextField kivymd.uix.textfield.MDTextField
+#:import MDFillRoundFlatIconButton kivymd.uix.button.MDFillRoundFlatIconButton
+
+#:import dp kivy.metrics.dp
+#:import sp kivy.metrics.sp
+
+# Import local components
+#:import MyMDDivider screens.divider.MyMDDivider
+
+# The kivymd main screen
+MDScreen:
+
+    MDBoxLayout: # main container
+        orientation: 'vertical'
+        #padding: dp(4)
+        spacing: dp(4)
+
+        MDTopAppBar:
+            title: "Image2Sketch Animation"
+            left_action_items: [["menu", lambda x: app.menu_bar_callback(x)]]
+            md_bg_color: '#7643a8'
+
+        MDGridLayout: # top file browser
+            cols: 2
+            size_hint_y: 0.1
+            padding: 8, 10, 8, 10 # left, top, right, bottom
+
+            MDLabel:
+                id: img_selector_lbl
+                text: "Select an image file >"
+                size_hint_y: None
+                height: self.texture_size[1]
+                size_hint_x: 0.7
+                #pos_hint: {"y": 0.1}
+                #valign: 'top'
+                #halign: 'right'
+
+            MDFillRoundFlatIconButton:
+                id: btn_img_upload
+                text: "Upload"
+                icon: "file-image"
+                font_size: sp(18)
+                #md_bg_color: '#f8d7e3'
+                pos_hint: {"center_x": .5, "center_y": .5}
+                size_hint_x: 0.3
+                #size_hint_y: 0.9
+                on_release: app.open_img_file_manager()
+
+            MyMDDivider:
+                color: (0, 0, 0, 0.25)
+
+        MDGridLayout: # video player
+            id: player_box
+            cols: 1
+            size_hint_y: 0.5
+            padding: 2, 10, 2, 10 # left, top, right, bottom
+
+            # video player will be added under this box from main program
+
+        MyMDDivider:
+            color: (0, 0, 0, 0.25)
+
+        MDGridLayout: # params
+            cols: 5
+            size_hint_y: 0.2
+            spacing: dp(4)
+            padding: 2, 10, 2, 10 # left, top, right, bottom
+            ## Split len, Frame rate, Object skip rate, Background skip rate, Original image duration
+
+            # hint texts in first row
+            MDLabel:
+                text: "Select video speed"
+                font_style: 'Caption'
+                size_hint_y: None
+                height: self.texture_size[1]
+                size_hint_x: 0.2
+
+            MDLabel:
+                text: "Frame rate"
+                font_style: 'Caption'
+                size_hint_y: None
+                height: self.texture_size[1]
+                size_hint_x: 0.2
+
+            MDLabel:
+                text: "Object skip rate"
+                font_style: 'Caption'
+                size_hint_y: None
+                height: self.texture_size[1]
+                size_hint_x: 0.2
+
+            MDLabel:
+                text: "Background skip rate"
+                font_style: 'Caption'
+                size_hint_y: None
+                height: self.texture_size[1]
+                size_hint_x: 0.2
+
+            MDLabel:
+                text: "Main image duration"
+                font_style: 'Caption'
+                size_hint_y: None
+                height: self.texture_size[1]
+                size_hint_x: 0.2
+
+            # taking the values in next row
+            MDDropDownItem:
+                id: split_len_drp
+                md_bg_color: "#bdc6b0"
+                on_release: app.split_len_options.open()
+                text: "speed"
+                font_size: sp(14)
+                size_hint_x: 0.2
+
+            MDTextField:
+                id: frame_rate
+                text: "25"
+                input_filter: 'int'
+                max_text_length: 2
+                hint_text: "fps"
+                helper_text: "default: 25"
+                helper_text_mode: "persistent"
+                mode: "rectangle"
+                size_hint_x: 0.2
+                font_size: sp(14)
+
+            MDTextField:
+                id: obj_skip_rate
+                text: "8"
+                input_filter: 'int'
+                max_text_length: 2
+                hint_text: "obj skip"
+                helper_text: "default: 8"
+                helper_text_mode: "persistent"
+                mode: "rectangle"
+                size_hint_x: 0.2
+                font_size: sp(14)
+
+            MDTextField:
+                id: bck_skip_rate
+                text: "14"
+                input_filter: 'int'
+                max_text_length: 2
+                hint_text: "bck skip"
+                helper_text: "default: 14"
+                helper_text_mode: "persistent"
+                mode: "rectangle"
+                size_hint_x: 0.2
+                font_size: sp(14)
+
+            MDTextField:
+                id: main_img_duration
+                text: "2"
+                input_filter: 'int'
+                max_text_length: 1
+                hint_text: "seconds"
+                helper_text: "default: 2"
+                helper_text_mode: "persistent"
+                mode: "rectangle"
+                size_hint_x: 0.2
+                font_size: sp(14)
+
+        MDGridLayout: # buttons
+            cols: 3
+            size_hint_y: 0.2
+            spacing: dp(4)
+            padding: 14, 0, 14, 0 # left, top, right, bottom
+
+            MDFillRoundFlatIconButton:
+                id: btn_reset
+                text: "Reset"
+                icon: "undo-variant"
+                font_size: sp(18)
+                md_bg_color: '#333036'
+                pos_hint: {"center_x": .5, "center_y": .5}
+                size_hint_x: 0.2
+                on_release: app.reset_all()
+
+            MDFillRoundFlatIconButton:
+                id: btn_submit
+                text: "Submit"
+                icon: "send"
+                font_size: sp(18)
+                md_bg_color: 'orange'
+                pos_hint: {"center_x": .5, "center_y": .5}
+                size_hint_x: 0.6
+                on_release: app.submit_sketch_req()
+
+            MDFillRoundFlatIconButton:
+                id: btn_help
+                text: "Demo"
+                icon: "youtube"
+                font_size: sp(18)
+                md_bg_color: '#bd3c94'
+                pos_hint: {"center_x": .5, "center_y": .5}
+                size_hint_x: 0.2
+                on_release: app.open_demo_video()
