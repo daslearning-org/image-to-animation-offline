@@ -69,7 +69,7 @@ class DlImg2SktchApp(MDApp):
             "Documentation": {
                 "icon": "file-document-check",
                 "action": "web",
-                "url": "https://blog.daslearning.in/", # actual link to be updated
+                "url": "https://blog.daslearning.in/llm_ai/genai/image-to-animation.html",
             },
             "Contact Us": {
                 "icon": "card-account-phone",
@@ -396,7 +396,7 @@ class DlImg2SktchApp(MDApp):
 
     def update_checker(self, instance):
         self.txt_dialog.dismiss()
-        self.open_link("https://github.com/daslearning-org") # actual link to be updated
+        self.open_link("https://github.com/daslearning-org/image-to-animation-offline/releases")
 
     def open_demo_video(self):
         self.open_link("https://youtube.com/playlist?list=PL7ZAVvBwIkXYJPUA3Wvkykk0u7DYWO3OI") # actual link to be updated
