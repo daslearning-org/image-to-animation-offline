@@ -16,6 +16,9 @@ You can check the [Releases](https://github.com/daslearning-org/image-to-animati
 
 > If you use the `Download` button from the app, you can save the animation video in one of the mentioned folders: `Downloads`, `Movies`, `Videos` due android file access restrictions on `Android 11+`.
 
+### 💻 Download & Run the Windows or Linux App
+You can check the [Releases](https://github.com/daslearning-org/image-to-animation-offline/tags) and downlaod the latest version of the app on your `Linux` or `Windows` platform. The Linux app has no extension, you may need to change the permission of the file to run it. The Windows app will have an `exe` extension, just double click & run it (You may need to create an exception for Antivirus if there is any detection).
+
 ### 🐍 Run with Python
 
 1. Clone the repo
