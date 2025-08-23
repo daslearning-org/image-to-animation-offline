@@ -415,7 +415,7 @@ def initiate_sketch(image_path, split_len, frame_rate, object_skip_rate, bg_obje
     platform = which_platform
     final_result = {"status": False, "message": "Initial load"}
     try:
-        image = cv2.imread(image_path)
+        image_bgr = cv2.imread(image_path)
         mask_path = None # To be added later
         # video save path
         now = datetime.datetime.now()
@@ -430,11 +430,12 @@ def initiate_sketch(image_path, split_len, frame_rate, object_skip_rate, bg_obje
         print("save_video_path: ", save_video_path)
 
         # Get image width & height. If the resolution is not standard & split length is not a common divisor, get the nearest standard res
-        image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         img_ht, img_wd = image_bgr.shape[0], image_bgr.shape[1]
+        aspect_ratio = img_wd / img_ht
         img_ht = find_nearest_res(img_ht)
-        img_wd = find_nearest_res(img_wd)
-        print(f"image width: {img_wd} x image height: {img_ht}")
+        new_aspect_wd = int(img_ht * aspect_ratio)
+        img_wd = find_nearest_res(new_aspect_wd)
+        print(f"Target width: {img_wd} x height: {img_ht}")
 
         # constants and variables object
         variables = AllVariables(
@@ -468,15 +469,17 @@ def get_split_lens(image_path):
     final_return = {"image_res": "None", "split_lens": []}
     hcf_list = []
     try:
-        image = cv2.imread(image_path)
-        image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        image_bgr = cv2.imread(image_path)
+        #image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         img_ht, img_wd = image_bgr.shape[0], image_bgr.shape[1]
+        aspect_ratio = img_wd / img_ht
         img_ht = find_nearest_res(img_ht)
-        img_wd = find_nearest_res(img_wd)
+        new_aspect_wd = int(img_ht * aspect_ratio)
+        img_wd = find_nearest_res(new_aspect_wd)
         hcf_list = common_divisors(img_ht, img_wd)
         filename = os.path.basename(image_path)
         final_return["split_lens"] = hcf_list
-        final_return["image_res"] = f"{filename}'s resolution: {img_wd} x {img_ht}"
+        final_return["image_res"] = f"{filename}, video resolution: {img_wd} x {img_ht}"
     except Exception as e:
         print(f"Error while getting split len: {e}")
     return final_return # list of split length
