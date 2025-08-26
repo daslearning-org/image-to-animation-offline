@@ -416,7 +416,7 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
         app_path = app_storage_path()
         print(app_path)
         ffmpeg_path = os.path.join(
-            app_path, "app", "_python_bundle", "site-packages", "bin", "ffmpeg"
+            app_path, "app", "_python_bundle", "site-packages", "ffmpeg_bin", "ffmpeg"
         )
     else:
         ffmpeg_path = "ffmpeg"

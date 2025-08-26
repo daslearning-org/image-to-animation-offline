@@ -144,8 +144,8 @@ class FFMpegRecipe(Recipe):
                   self.ctx.get_libs_dir(arch.arch))
 
             # copy ffmpeg binary into app/bin
-            bin_dir = join(self.ctx.get_python_install_dir(arch.arch), 'bin')
-            #os.makedirs(bin_dir, exist_ok=True)
+            bin_dir = join(self.ctx.get_python_install_dir(arch.arch), 'ffmpeg_bin')
+            os.makedirs(bin_dir, exist_ok=True)
             if exists('./ffmpeg'):
                 sh.cp('./ffmpeg', bin_dir)
 
