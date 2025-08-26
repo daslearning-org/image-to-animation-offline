@@ -1,6 +1,7 @@
 from pythonforandroid.toolchain import Recipe, current_directory, shprint
 from os.path import exists, join, realpath
 import sh
+import os
 
 
 class FFMpegRecipe(Recipe):
@@ -143,8 +144,8 @@ class FFMpegRecipe(Recipe):
                   self.ctx.get_libs_dir(arch.arch))
 
             # copy ffmpeg binary into app/bin
-            bin_dir = join(self.ctx.get_python_install_dir(), 'bin')
-            sh.mkdir('-p', bin_dir)
+            bin_dir = join(self.ctx.get_python_install_dir(arch.arch), 'bin')
+            #os.makedirs(bin_dir, exist_ok=True)
             if exists('./ffmpeg'):
                 sh.cp('./ffmpeg', bin_dir)
 

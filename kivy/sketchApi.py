@@ -413,8 +413,11 @@ def common_divisors(num1, num2):
 def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
     if platform == "android":
         from android.storage import app_storage_path
-        bin_dir = os.path.join(app_storage_path(), "bin")
-        ffmpeg_path = os.path.join(bin_dir, "ffmpeg")
+        app_path = app_storage_path()
+        print(app_path)
+        ffmpeg_path = os.path.join(
+            app_path, "app", "_python_bundle", "site-packages", "bin", "ffmpeg"
+        )
     else:
         ffmpeg_path = "ffmpeg"
     try:
