@@ -1,0 +1,13 @@
+--- ffmpeg-n6.1.2/fftools/ffmpeg.c.orig	2024-08-01 10:00:00.000000000 +0000
++++ ffmpeg-n6.1.2/fftools/ffmpeg.c	2024-08-01 10:05:00.000000000 +0000
+@@ -5991,7 +5991,11 @@
+     return received_nb_signals ? 255 : main_return_code;
+ }
+ 
+-int main(int argc, char **argv)
++// Rename main() so it can be exported in libffmpeg.so
++__attribute__((visibility("default")))
++int ffmpeg_main(int argc, char **argv)
+ {
+     int ret;
+     ret = ffmpeg_main(argc, argv);

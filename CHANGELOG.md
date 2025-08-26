@@ -5,7 +5,7 @@
 
 ## Change Details
 
-### 0.2.0
+### 0.2.1
 - Adding ffmpeg convert step after the animation generation which reduces the video file size
 
 ### 0.1.1

@@ -31,7 +31,7 @@ from screens.divider import MyMDDivider
 from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
     # Running as a PyInstaller bundle

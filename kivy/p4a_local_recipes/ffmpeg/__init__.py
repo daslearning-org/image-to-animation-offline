@@ -1,7 +1,6 @@
 from pythonforandroid.toolchain import Recipe, current_directory, shprint
 from os.path import exists, join, realpath
 import sh
-import os
 
 
 class FFMpegRecipe(Recipe):
@@ -9,11 +8,11 @@ class FFMpegRecipe(Recipe):
     url = 'https://github.com/FFmpeg/FFmpeg/archive/{version}.zip'
     depends = ['sdl2', 'libx264', 'ffpyplayer_codecs']
     opts_depends = ['openssl', 'av_codecs']
-    patches = ['patches/configure.patch']
+    patches = ['patches/configure.patch', 'patches/ffmpeg_main.patch']
 
     def should_build(self, arch):
         build_dir = self.get_build_dir(arch.arch)
-        return not exists(join(build_dir, 'lib', 'libavcodec.so'))
+        return not exists(join(build_dir, 'lib', 'libffmpeg.so'))
 
     def get_recipe_env(self, arch):
         env = super().get_recipe_env(arch)
@@ -28,7 +27,7 @@ class FFMpegRecipe(Recipe):
             cflags = []
             ldflags = []
 
-            # enable hardware acceleration codecs
+            # enable JNI + MediaCodec
             flags += [
                 '--enable-jni',
                 '--enable-mediacodec'
@@ -40,8 +39,7 @@ class FFMpegRecipe(Recipe):
                     '--enable-nonfree',
                     '--enable-protocol=https,tls_openssl',
                 ]
-                build_dir = Recipe.get_recipe(
-                    'openssl', self.ctx).get_build_dir(arch.arch)
+                build_dir = Recipe.get_recipe('openssl', self.ctx).get_build_dir(arch.arch)
                 cflags += ['-I' + build_dir + '/include/',
                            '-DOPENSSL_API_COMPAT=0x10002000L']
                 ldflags += ['-L' + build_dir]
@@ -52,10 +50,9 @@ class FFMpegRecipe(Recipe):
 
                 # libx264
                 flags += ['--enable-libx264']
-                build_dir = Recipe.get_recipe(
-                    'libx264', self.ctx).get_build_dir(arch.arch)
+                build_dir = Recipe.get_recipe('libx264', self.ctx).get_build_dir(arch.arch)
                 cflags += ['-I' + build_dir + '/include/']
-                ldflags += [build_dir + '/lib/' + 'libx264.a']
+                ldflags += [build_dir + '/lib/libx264.a']
 
                 # libshine
                 flags += ['--enable-libshine']
@@ -65,12 +62,11 @@ class FFMpegRecipe(Recipe):
 
                 # libvpx
                 flags += ['--enable-libvpx']
-                build_dir = Recipe.get_recipe(
-                    'libvpx', self.ctx).get_build_dir(arch.arch)
+                build_dir = Recipe.get_recipe('libvpx', self.ctx).get_build_dir(arch.arch)
                 cflags += ['-I' + build_dir + '/include/']
                 ldflags += ['-lvpx', '-L' + build_dir + '/lib/']
 
-                # Enable codecs
+                # enable useful codecs
                 flags += [
                     '--enable-parser=aac,ac3,h261,h264,mpegaudio,mpeg4video,mpegvideo,vc1',
                     '--enable-decoder=aac,h264,mpeg4,mpegvideo',
@@ -78,31 +74,24 @@ class FFMpegRecipe(Recipe):
                     '--enable-muxer=h264,mov,mp4,mpeg2video,avi',
                     '--enable-demuxer=aac,h264,m4v,mov,mpegvideo,vc1,rtsp',
                 ]
-            else:
-                flags += [
-                    '--enable-parser=aac,ac3,h261,h264,mpegaudio,mpeg4video,mpegvideo,vc1',
-                    '--enable-decoder=aac,h264,mpeg4,mpegvideo',
-                    '--enable-encoder=h264,libx264,h264_mediacodec,mpeg4,mpeg2video',
-                    '--enable-muxer=h264,mov,mp4,mpeg2video,avi',
-                    '--enable-demuxer=aac,h264,m4v,mov,mpegvideo,vc1,rtsp',
-                ]
 
-            # prevent _ffmpeg.so version mismatch
+            # prevent symbol issues
             flags += ['--disable-symver']
 
-            # do NOT disable programs anymore → we want ffmpeg binary
+            # instead of disabling programs entirely,
+            # build ffmpeg.c into a shared library
             flags += [
                 '--disable-doc',
-                '--enable-filter=aresample,resample,crop,adelay,volume,scale',
-                '--enable-protocol=file,http,hls,udp,tcp',
-                '--enable-small',
-                '--enable-hwaccels',
-                '--enable-pic',
+                '--enable-shared',
                 '--disable-static',
                 '--disable-debug',
-                '--enable-shared',
+                '--enable-small',
+                '--enable-cross-compile',
+                '--target-os=android',
+                '--prefix={}'.format(realpath('.')),
             ]
 
+            # architecture flags
             if 'arm64' in arch.arch:
                 arch_flag = 'aarch64'
             elif 'x86' in arch.arch:
@@ -111,16 +100,12 @@ class FFMpegRecipe(Recipe):
             else:
                 arch_flag = 'arm'
 
-            # android toolchain
             flags += [
-                '--target-os=android',
-                '--enable-cross-compile',
                 '--cross-prefix={}-'.format(arch.target),
                 '--arch={}'.format(arch_flag),
                 '--strip={}'.format(self.ctx.ndk.llvm_strip),
                 '--sysroot={}'.format(self.ctx.ndk.sysroot),
-                '--enable-neon',
-                '--prefix={}'.format(realpath('.')),
+                '--enable-pic',
             ]
 
             if arch_flag == 'arm':
@@ -133,21 +118,19 @@ class FFMpegRecipe(Recipe):
             env['CFLAGS'] += ' ' + ' '.join(cflags)
             env['LDFLAGS'] += ' ' + ' '.join(ldflags)
 
-            # build & install
+            # configure
             configure = sh.Command('./configure')
             shprint(configure, *flags, _env=env)
+
+            # build libraries
             shprint(sh.make, '-j4', _env=env)
-            shprint(sh.make, 'install', _env=env)
 
-            # copy libs
-            sh.cp('-a', sh.glob('./lib/lib*.so'),
+            # build ffmpeg.c into a shared library exporting ffmpeg_main
+            shprint(sh.make, 'libffmpeg.so', _env=env)
+
+            # install .so files into libs dir
+            sh.cp('-a', sh.glob('./lib*.so'),
                   self.ctx.get_libs_dir(arch.arch))
-
-            # copy ffmpeg binary into app/bin
-            bin_dir = join(self.ctx.get_python_install_dir(arch.arch), 'ffmpeg_bin')
-            os.makedirs(bin_dir, exist_ok=True)
-            if exists('./ffmpeg'):
-                sh.cp('./ffmpeg', bin_dir)
 
 
 recipe = FFMpegRecipe()
