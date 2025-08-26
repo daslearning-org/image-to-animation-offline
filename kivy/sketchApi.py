@@ -1,5 +1,6 @@
 import os
 import sys
+import subprocess
 import time
 import math
 import json
@@ -409,6 +410,27 @@ def common_divisors(num1, num2):
     common_divs.sort()  # Sort the list in ascending order
     return common_divs
 
+def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
+    if platform == "android":
+        from android.storage import app_storage_path
+        bin_dir = os.path.join(app_storage_path(), "bin")
+        ffmpeg_path = os.path.join(bin_dir, "ffmpeg")
+    else:
+        ffmpeg_path = "ffmpeg"
+    try:
+        subprocess.run([
+            ffmpeg_path,
+            "-i", source_vid,
+            "-c:v", "libx264",
+            "-preset", "fast",
+            "-crf", "23",
+            dest_vid
+        ])
+        print(f"ffmpeg convert success, converted file: {dest_vid}")
+        return True
+    except Exception as e:
+        print(f"ffmpeg convert error: {e}")
+        return False
 
 def initiate_sketch(image_path, split_len, frame_rate, object_skip_rate, bg_object_skip_rate, main_img_duration, callback, save_path=save_path, which_platform="linux"):
     global platform
@@ -426,6 +448,8 @@ def initiate_sketch(image_path, split_len, frame_rate, object_skip_rate, bg_obje
         else:
             video_save_name = f"vid_{current_date}_{current_time}.mp4" #mp4
         save_video_path = os.path.join(save_path, video_save_name)
+        ffmpeg_file_name = f"vid_{current_date}_{current_time}_h264.mp4"
+        ffmpeg_video_path = os.path.join(save_path, ffmpeg_file_name)
         os.makedirs(os.path.dirname(save_video_path), exist_ok=True)
         print("save_video_path: ", save_video_path)
 
@@ -454,7 +478,13 @@ def initiate_sketch(image_path, split_len, frame_rate, object_skip_rate, bg_obje
             draw_whiteboard_animations(
                 image_bgr, mask_path, hand_path, hand_mask_path, save_video_path, variables
             )
-            final_result = {"status": True, "message": f"{save_video_path}"}
+            ff_stat = ffmpeg_convert(source_vid=save_video_path, dest_vid=ffmpeg_video_path, platform=platform)
+            if ff_stat:
+                final_result = {"status": True, "message": f"{ffmpeg_video_path}"}
+                os.unlink(save_video_path)
+                print(f"removed raw video: {save_video_path}")
+            else:
+                final_result = {"status": True, "message": f"{save_video_path}"}
         except Exception as e:
             print(f"Error: {e}")
             final_result = {"status": False, "message": f"Error: {e}"}

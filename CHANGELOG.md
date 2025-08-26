@@ -1,6 +1,12 @@
 # Changes on the App
 
+## App Details
+- APK for `Android`, EXE for `Windows` & the other file without any extension is for `Linux`. [Documentation Link](https://blog.daslearning.in/llm_ai/genai/image-to-animation.html)
+
 ## Change Details
+
+### 0.2.0
+- Adding ffmpeg convert step after the animation generation which reduces the video file size
 
 ### 0.1.1
 - Fixing the color changing (was becomin blue) of final image.
