@@ -1,4 +1,4 @@
-import os
+import os, stat, shutil
 import sys
 import subprocess
 import time
@@ -411,41 +411,31 @@ def common_divisors(num1, num2):
     return common_divs
 
 def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
-    stat_flag = False
     if platform == "android":
         from android.storage import app_storage_path
-        import ctypes
         app_path = app_storage_path()
         print(app_path)
-        try:
-            ffmpeg_path = os.path.join(app_path, "app", "_python_bundle", "site-packages", "ffmpeg.so")
-            ffmpeg = ctypes.CDLL(ffmpeg_path)
-            args = [b"ffmpeg", b"-i", source_vid.encode("utf-8"), b"-c:v", b"libx264", dest_vid.encode("utf-8"), None]
-            argc = len(args) - 1
-            argv = (ctypes.c_char_p * len(args))(*args)
-            ffmpeg.ffmpeg_main(argc, argv)
-            print(f"ffmpeg convert success, converted file: {dest_vid}")
-            stat_flag = True
-        except Exception as e:
-            print(f"ffmpeg convert error: {e}")
-            stat_flag = False
+        ffmpeg_path = os.path.join(
+            app_path, "app", "_python_bundle", "site-packages", "ffmpeg_bin", "ffmpeg"
+        )
     else:
         ffmpeg_path = "ffmpeg"
-        try:
-            subprocess.run([
-                ffmpeg_path,
-                "-i", source_vid,
-                "-c:v", "libx264",
-                "-preset", "fast",
-                "-crf", "23",
-                dest_vid
-            ])
-            print(f"ffmpeg convert success, converted file: {dest_vid}")
-            stat_flag = True
-        except Exception as e:
-            print(f"ffmpeg convert error: {e}")
-            stat_flag = False
-    return stat_flag
+    try:
+        if platform == "android":
+            os.chmod(ffmpeg_path, stat.S_IRWXU)
+        subprocess.run([
+            ffmpeg_path,
+            "-i", source_vid,
+            "-c:v", "libx264",
+            "-preset", "fast",
+            "-crf", "23",
+            dest_vid
+        ])
+        print(f"ffmpeg convert success, converted file: {dest_vid}")
+        return True
+    except Exception as e:
+        print(f"ffmpeg convert error: {e}")
+        return False
 
 def initiate_sketch(image_path, split_len, frame_rate, object_skip_rate, bg_object_skip_rate, main_img_duration, callback, save_path=save_path, which_platform="linux"):
     global platform

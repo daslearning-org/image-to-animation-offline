@@ -1,13 +1,24 @@
---- ffmpeg-n6.1.2/fftools/ffmpeg.c.orig	2024-08-01 10:00:00.000000000 +0000
-+++ ffmpeg-n6.1.2/fftools/ffmpeg.c	2024-08-01 10:05:00.000000000 +0000
-@@ -5991,7 +5991,11 @@
-     return received_nb_signals ? 255 : main_return_code;
- }
+--- a/fftools/ffmpeg.c
++++ b/fftools/ffmpeg.c
+@@ -141,6 +141,11 @@
+    This is a temporary solution until libavfilter gets real subtitles support.
+  */
  
--int main(int argc, char **argv)
-+// Rename main() so it can be exported in libffmpeg.so
++__attribute__((visibility("default")))
++int ffmpeg_main(int argc, char **argv);
++
++int main(int argc, char **argv);
++
+ static void sub2video_heartbeat(InputFile *infile, int64_t pts, AVRational tb)
+ {
+     /* When a frame is read from a file, examine all sub2video streams in
+@@ -1350,3 +1355,9 @@
+     ffmpeg_cleanup(ret);
+     return ret;
+ }
++
 +__attribute__((visibility("default")))
 +int ffmpeg_main(int argc, char **argv)
- {
-     int ret;
-     ret = ffmpeg_main(argc, argv);
++{
++    return main(argc, argv);
++}
