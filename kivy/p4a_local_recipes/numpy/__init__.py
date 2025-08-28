@@ -1,3 +1,5 @@
+# using commit : 87a32be7feedc284d00acb303cad7da2d7a14a03
+# link: https://github.com/kivy/python-for-android/tree/87a32be7feedc284d00acb303cad7da2d7a14a03/pythonforandroid/recipes
 from pythonforandroid.recipe import Recipe, MesonRecipe
 from pythonforandroid.logger import error
 from os.path import join

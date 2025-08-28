@@ -411,31 +411,36 @@ def common_divisors(num1, num2):
     return common_divs
 
 def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
-    if platform == "android":
-        from android.storage import app_storage_path
-        app_path = app_storage_path()
-        print(app_path)
-        ffmpeg_path = os.path.join(
-            app_path, "app", "_python_bundle", "site-packages", "ffmpeg_bin", "ffmpeg"
-        )
-    else:
-        ffmpeg_path = "ffmpeg"
+    ff_stat = False
     try:
-        if platform == "android":
-            os.chmod(ffmpeg_path, stat.S_IRWXU)
-        subprocess.run([
-            ffmpeg_path,
-            "-i", source_vid,
-            "-c:v", "libx264",
-            "-preset", "fast",
-            "-crf", "23",
-            dest_vid
-        ])
+        import av
+        input_container = av.open(source_vid)
+        in_stream = input_container.streams.video[0]
+        width = in_stream.codec_context.width
+        height = in_stream.codec_context.height
+        fps = in_stream.average_rate
+        output_container = av.open(dest_vid, mode='w')
+        out_stream = output_container.add_stream("h264", rate=fps)
+        out_stream.width = width
+        out_stream.height = height
+        out_stream.pix_fmt = "yuv420p"
+        # Better quality control
+        out_stream.options = {"crf": "20"}  # adjust between 18–23
+        for frame in input_container.decode(video=0):
+            packet = out_stream.encode(frame)
+            if packet:
+                output_container.mux(packet)
+        packet = out_stream.encode(None)
+        if packet:
+            output_container.mux(packet)
+        output_container.close()
+        input_container.close()
+
         print(f"ffmpeg convert success, converted file: {dest_vid}")
-        return True
+        ff_stat = True
     except Exception as e:
         print(f"ffmpeg convert error: {e}")
-        return False
+    return ff_stat
 
 def initiate_sketch(image_path, split_len, frame_rate, object_skip_rate, bg_object_skip_rate, main_img_duration, callback, save_path=save_path, which_platform="linux"):
     global platform
