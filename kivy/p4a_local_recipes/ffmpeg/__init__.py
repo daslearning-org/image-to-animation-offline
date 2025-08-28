@@ -1,14 +1,14 @@
 from pythonforandroid.toolchain import Recipe, current_directory, shprint
 from os.path import exists, join, realpath
 import sh
-import os
 
 
 class FFMpegRecipe(Recipe):
     version = 'n6.1.2'
+    # Moved to github.com instead of ffmpeg.org to improve download speed
     url = 'https://github.com/FFmpeg/FFmpeg/archive/{version}.zip'
-    depends = ['sdl2', 'libx264', 'ffpyplayer_codecs']
-    opts_depends = ['openssl', 'av_codecs']
+    depends = ['sdl2']  # Need this to build correct recipe order
+    opts_depends = ['openssl', 'ffpyplayer_codecs', 'av_codecs']
     patches = ['patches/configure.patch']
 
     def should_build(self, arch):
@@ -24,12 +24,12 @@ class FFMpegRecipe(Recipe):
         with current_directory(self.get_build_dir(arch.arch)):
             env = arch.get_env()
 
-            flags = []
+            flags = ['--disable-everything']
             cflags = []
             ldflags = []
 
             # enable hardware acceleration codecs
-            flags += [
+            flags = [
                 '--enable-jni',
                 '--enable-mediacodec'
             ]
@@ -48,6 +48,8 @@ class FFMpegRecipe(Recipe):
 
             codecs_opts = {"ffpyplayer_codecs", "av_codecs"}
             if codecs_opts.intersection(self.ctx.recipe_build_order):
+
+                # Enable GPL
                 flags += ['--enable-gpl']
 
                 # libx264
@@ -55,13 +57,16 @@ class FFMpegRecipe(Recipe):
                 build_dir = Recipe.get_recipe(
                     'libx264', self.ctx).get_build_dir(arch.arch)
                 cflags += ['-I' + build_dir + '/include/']
+                # Newer versions of FFmpeg prioritize the dynamic library and ignore
+                # the static one, unless the static library path is explicitly set.
                 ldflags += [build_dir + '/lib/' + 'libx264.a']
 
                 # libshine
                 flags += ['--enable-libshine']
                 build_dir = Recipe.get_recipe('libshine', self.ctx).get_build_dir(arch.arch)
                 cflags += ['-I' + build_dir + '/include/']
-                ldflags += ['-lshine', '-L' + build_dir + '/lib/', '-lm']
+                ldflags += ['-lshine', '-L' + build_dir + '/lib/']
+                ldflags += ['-lm']
 
                 # libvpx
                 flags += ['--enable-libvpx']
@@ -70,29 +75,37 @@ class FFMpegRecipe(Recipe):
                 cflags += ['-I' + build_dir + '/include/']
                 ldflags += ['-lvpx', '-L' + build_dir + '/lib/']
 
-                # Enable codecs
+                # Enable all codecs:
                 flags += [
-                    '--enable-parser=aac,ac3,h261,h264,mpegaudio,mpeg4video,mpegvideo,vc1',
-                    '--enable-decoder=aac,h264,mpeg4,mpegvideo',
-                    '--enable-encoder=h264,libx264,h264_mediacodec,mpeg4,mpeg2video,libvpx',
-                    '--enable-muxer=h264,mov,mp4,mpeg2video,avi',
-                    '--enable-demuxer=aac,h264,m4v,mov,mpegvideo,vc1,rtsp',
+                    '--enable-parsers',
+                    '--enable-decoders',
+                    '--enable-encoders',
+                    '--enable-muxers',
+                    '--enable-demuxers',
                 ]
             else:
+                # Enable codecs only for .mp4:
                 flags += [
                     '--enable-parser=aac,ac3,h261,h264,mpegaudio,mpeg4video,mpegvideo,vc1',
                     '--enable-decoder=aac,h264,mpeg4,mpegvideo',
-                    '--enable-encoder=h264,libx264,h264_mediacodec,mpeg4,mpeg2video',
-                    '--enable-muxer=h264,mov,mp4,mpeg2video,avi',
+                    '--enable-muxer=h264,mov,mp4,mpeg2video',
                     '--enable-demuxer=aac,h264,m4v,mov,mpegvideo,vc1,rtsp',
                 ]
 
-            # prevent _ffmpeg.so version mismatch
-            flags += ['--disable-symver']
-
-            # do NOT disable programs anymore → we want ffmpeg binary
+            # needed to prevent _ffmpeg.so: version node not found for symbol av_init_packet@LIBAVFORMAT_52
+            # /usr/bin/ld: failed to set dynamic section sizes: Bad value
             flags += [
+                '--disable-symver',
+            ]
+
+            # disable binaries / doc
+            flags += [
+                '--disable-programs',
                 '--disable-doc',
+            ]
+
+            # other flags:
+            flags += [
                 '--enable-filter=aresample,resample,crop,adelay,volume,scale',
                 '--enable-protocol=file,http,hls,udp,tcp',
                 '--enable-small',
@@ -111,7 +124,7 @@ class FFMpegRecipe(Recipe):
             else:
                 arch_flag = 'arm'
 
-            # android toolchain
+            # android:
             flags += [
                 '--target-os=android',
                 '--enable-cross-compile',
@@ -133,21 +146,13 @@ class FFMpegRecipe(Recipe):
             env['CFLAGS'] += ' ' + ' '.join(cflags)
             env['LDFLAGS'] += ' ' + ' '.join(ldflags)
 
-            # build & install
             configure = sh.Command('./configure')
             shprint(configure, *flags, _env=env)
             shprint(sh.make, '-j4', _env=env)
             shprint(sh.make, 'install', _env=env)
-
-            # copy libs
+            # copy libs:
             sh.cp('-a', sh.glob('./lib/lib*.so'),
                   self.ctx.get_libs_dir(arch.arch))
-
-            # copy ffmpeg binary into app/bin
-            bin_dir = join(self.ctx.get_python_install_dir(arch.arch), 'ffmpeg_bin')
-            os.makedirs(bin_dir, exist_ok=True)
-            if exists('./ffmpeg'):
-                sh.cp('./ffmpeg', bin_dir)
 
 
 recipe = FFMpegRecipe()
