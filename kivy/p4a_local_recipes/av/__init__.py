@@ -1,5 +1,6 @@
 from pythonforandroid.toolchain import Recipe
 from pythonforandroid.recipe import CythonRecipe
+import os
 
 
 class PyAVRecipe(CythonRecipe):
@@ -14,10 +15,17 @@ class PyAVRecipe(CythonRecipe):
     def get_recipe_env(self, arch, with_flags_in_cc=True):
         env = super().get_recipe_env(arch)
 
-        build_dir = Recipe.get_recipe("ffmpeg", self.ctx).get_build_dir(
-            arch.arch
-        )
-        self.setup_extra_args = ["--ffmpeg-dir={}".format(build_dir)]
+        ffmpeg_build = Recipe.get_recipe("ffmpeg", self.ctx).get_build_dir(arch.arch)
+
+        ffmpeg_include = os.path.join(ffmpeg_build, "include")
+        ffmpeg_lib = os.path.join(ffmpeg_build, "lib")
+
+        # Tell compiler where to look
+        env["CFLAGS"] = env.get("CFLAGS", "") + f" -I{ffmpeg_include}"
+        env["LDFLAGS"] = env.get("LDFLAGS", "") + f" -L{ffmpeg_lib}"
+
+        # Some setup.py use this argument
+        self.setup_extra_args = [f"--ffmpeg-dir={ffmpeg_build}"]
 
         return env
 
