@@ -4,19 +4,16 @@ import sh
 
 
 class FFMpegRecipe(Recipe):
-    version = 'n4.3.1'
+    version = 'n6.1.2'
     # Moved to github.com instead of ffmpeg.org to improve download speed
     url = 'https://github.com/FFmpeg/FFmpeg/archive/{version}.zip'
-    depends = ['sdl2', 'ffpyplayer_codecs']  # Need this to build correct recipe order
-    opts_depends = ['openssl']
+    depends = ['sdl2', 'libx264', 'av_codecs']  # Need this to build correct recipe order
+    opts_depends = ['openssl', 'ffpyplayer_codecs']
     patches = ['patches/configure.patch']
 
     def should_build(self, arch):
         build_dir = self.get_build_dir(arch.arch)
         return not exists(join(build_dir, 'lib', 'libavcodec.so'))
-
-    def prebuild_arch(self, arch):
-        self.apply_patches(arch)
 
     def get_recipe_env(self, arch):
         env = super().get_recipe_env(arch)
@@ -31,6 +28,12 @@ class FFMpegRecipe(Recipe):
             cflags = []
             ldflags = []
 
+            # enable hardware acceleration codecs
+            flags = [
+                '--enable-jni',
+                '--enable-mediacodec'
+            ]
+
             if 'openssl' in self.ctx.recipe_build_order:
                 flags += [
                     '--enable-openssl',
@@ -43,7 +46,9 @@ class FFMpegRecipe(Recipe):
                            '-DOPENSSL_API_COMPAT=0x10002000L']
                 ldflags += ['-L' + build_dir]
 
-            if 'ffpyplayer_codecs' in self.ctx.recipe_build_order:
+            codecs_opts = {"ffpyplayer_codecs", "av_codecs"}
+            if codecs_opts.intersection(self.ctx.recipe_build_order):
+
                 # Enable GPL
                 flags += ['--enable-gpl']
 
@@ -52,7 +57,9 @@ class FFMpegRecipe(Recipe):
                 build_dir = Recipe.get_recipe(
                     'libx264', self.ctx).get_build_dir(arch.arch)
                 cflags += ['-I' + build_dir + '/include/']
-                ldflags += ['-lx264', '-L' + build_dir + '/lib/']
+                # Newer versions of FFmpeg prioritize the dynamic library and ignore
+                # the static one, unless the static library path is explicitly set.
+                ldflags += [build_dir + '/lib/' + 'libx264.a']
 
                 # libshine
                 flags += ['--enable-libshine']
@@ -70,18 +77,19 @@ class FFMpegRecipe(Recipe):
 
                 # Enable all codecs:
                 flags += [
-                    '--enable-parsers',
-                    '--enable-decoders',
-                    '--enable-encoders',
-                    '--enable-muxers',
-                    '--enable-demuxers',
+                    '--enable-parser=aac,ac3,h261,h264,mpegaudio,mpeg4video,mpegvideo,vc1',
+                    '--enable-decoder=aac,h264,mpeg4,mpegvideo',
+                    '--enable-encoder=h264,libx264,h264_mediacodec,mpeg4,mpeg2video,libvpx',
+                    '--enable-muxer=h264,mov,mp4,mpeg2video,avi',
+                    '--enable-demuxer=aac,h264,m4v,mov,mpegvideo,vc1,rtsp',
                 ]
             else:
                 # Enable codecs only for .mp4:
                 flags += [
                     '--enable-parser=aac,ac3,h261,h264,mpegaudio,mpeg4video,mpegvideo,vc1',
                     '--enable-decoder=aac,h264,mpeg4,mpegvideo',
-                    '--enable-muxer=h264,mov,mp4,mpeg2video',
+                    '--enable-encoder=h264,libx264,h264_mediacodec,mpeg4,mpeg2video',
+                    '--enable-muxer=h264,mov,mp4,mpeg2video,avi',
                     '--enable-demuxer=aac,h264,m4v,mov,mpegvideo,vc1,rtsp',
                 ]
 
