@@ -1,12 +1,12 @@
-from pythonforandroid.recipe import PyProjectRecipe, Recipe
+from pythonforandroid.recipe import CythonRecipe
+from pythonforandroid.toolchain import Recipe
 from os.path import join
 
 
-class FFPyPlayerRecipe(PyProjectRecipe):
-    version = 'v4.5.1'
+class FFPyPlayerRecipe(CythonRecipe):
+    version = 'v4.3.2'
     url = 'https://github.com/matham/ffpyplayer/archive/{version}.zip'
     depends = ['python3', 'sdl2', 'ffmpeg']
-    patches = ["setup.py.patch"]
     opt_depends = ['openssl', 'ffpyplayer_codecs']
 
     def get_recipe_env(self, arch, with_flags_in_cc=True):
@@ -32,7 +32,7 @@ class FFPyPlayerRecipe(PyProjectRecipe):
         env['LIBLINK'] = 'NOTNONE'
 
         # ffmpeg recipe enables GPL components only if ffpyplayer_codecs recipe used.
-        # Therefore we need to disable libpostproc if skipped.
+        # Therefor we need to disable libpostproc if skipped.
         if 'ffpyplayer_codecs' not in self.ctx.recipe_build_order:
             env["CONFIG_POSTPROC"] = '0'
 

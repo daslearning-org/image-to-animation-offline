@@ -4,16 +4,19 @@ import sh
 
 
 class FFMpegRecipe(Recipe):
-    version = 'n6.1.2'
+    version = 'n4.3.1'
     # Moved to github.com instead of ffmpeg.org to improve download speed
     url = 'https://github.com/FFmpeg/FFmpeg/archive/{version}.zip'
     depends = ['sdl2']  # Need this to build correct recipe order
-    opts_depends = ['openssl', 'ffpyplayer_codecs', 'av_codecs']
+    opts_depends = ['openssl', 'ffpyplayer_codecs']
     patches = ['patches/configure.patch']
 
     def should_build(self, arch):
         build_dir = self.get_build_dir(arch.arch)
         return not exists(join(build_dir, 'lib', 'libavcodec.so'))
+
+    def prebuild_arch(self, arch):
+        self.apply_patches(arch)
 
     def get_recipe_env(self, arch):
         env = super().get_recipe_env(arch)
@@ -28,12 +31,6 @@ class FFMpegRecipe(Recipe):
             cflags = []
             ldflags = []
 
-            # enable hardware acceleration codecs
-            flags = [
-                '--enable-jni',
-                '--enable-mediacodec'
-            ]
-
             if 'openssl' in self.ctx.recipe_build_order:
                 flags += [
                     '--enable-openssl',
@@ -46,9 +43,7 @@ class FFMpegRecipe(Recipe):
                            '-DOPENSSL_API_COMPAT=0x10002000L']
                 ldflags += ['-L' + build_dir]
 
-            codecs_opts = {"ffpyplayer_codecs", "av_codecs"}
-            if codecs_opts.intersection(self.ctx.recipe_build_order):
-
+            if 'ffpyplayer_codecs' in self.ctx.recipe_build_order:
                 # Enable GPL
                 flags += ['--enable-gpl']
 
@@ -57,9 +52,7 @@ class FFMpegRecipe(Recipe):
                 build_dir = Recipe.get_recipe(
                     'libx264', self.ctx).get_build_dir(arch.arch)
                 cflags += ['-I' + build_dir + '/include/']
-                # Newer versions of FFmpeg prioritize the dynamic library and ignore
-                # the static one, unless the static library path is explicitly set.
-                ldflags += [build_dir + '/lib/' + 'libx264.a']
+                ldflags += ['-lx264', '-L' + build_dir + '/lib/']
 
                 # libshine
                 flags += ['--enable-libshine']
