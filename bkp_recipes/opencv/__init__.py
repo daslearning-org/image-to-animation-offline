@@ -17,7 +17,7 @@ class OpenCVRecipe(NDKRecipe):
     '''
     version = '4.5.1'
     url = 'https://github.com/opencv/opencv/archive/{version}.zip'
-    depends = ['numpy']
+    depends = ['numpy', 'ffmpeg']
     patches = ['patches/p4a_build.patch']
     generated_libraries = [
         'libopencv_features2d.so',
@@ -90,10 +90,11 @@ class OpenCVRecipe(NDKRecipe):
                         version=python_link_version),
 
                     '-DBUILD_WITH_STANDALONE_TOOLCHAIN=ON',
-                    # Force to build as shared libraries the cv2's dependent
+                    # Force to build as shared libraries the cv2's dependant
                     # libs or we will not be able to link with our python
                     '-DBUILD_SHARED_LIBS=ON',
                     '-DBUILD_STATIC_LIBS=OFF',
+                    '-DWITH_FFMPEG=ON',
 
                     # Disable some opencv's features
                     '-DBUILD_opencv_java=OFF',
