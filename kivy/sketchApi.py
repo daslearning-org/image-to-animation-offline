@@ -412,14 +412,22 @@ def common_divisors(num1, num2):
 
 def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
     ff_stat = False
+    if platform == "android":
+        source_vid = source_vid.encode('utf-8')
+        dest_vid = dest_vid.encode('utf-8')
+        dest_vid_mode = b"w"
+    else:
+        dest_vid_mode = "w"
     try:
         import av
         input_container = av.open(source_vid)
+        print(f"Check PyAV container: {input_container}")
+        print(dir(input_container))
         in_stream = input_container.streams.video[0]
         width = in_stream.codec_context.width
         height = in_stream.codec_context.height
         fps = in_stream.average_rate
-        output_container = av.open(dest_vid, mode='w')
+        output_container = av.open(dest_vid, mode=dest_vid_mode)
         out_stream = output_container.add_stream("h264", rate=fps)
         out_stream.width = width
         out_stream.height = height
