@@ -22,20 +22,10 @@ class PyAVRecipe(CythonRecipe):
         build_dir = self.get_build_dir(arch.arch)
         av_pkg_dir = os.path.join(build_dir, "av")
         include_dir = os.path.join(build_dir, "include")
-        codec_dir = os.path.join(av_pkg_dir, "codec")
 
-        # Copy all .pxd files from include -> av/
-        info("Copying PyAV packages from {} to {}".format(include_dir, av_pkg_dir))
-        shutil.copytree(include_dir, av_pkg_dir, dirs_exist_ok=True)
-
-        # Copy libav.pxd to av/codec/ for context.pxd
-        #libav_pxd_src = os.path.join(av_pkg_dir, "libav.pxd")
-        #libav_pxd_dest = os.path.join(codec_dir, "libav.pxd")
-        #if os.path.exists(libav_pxd_src) and os.path.exists(codec_dir):
-        #    info("Copying {} to {}".format(libav_pxd_src, libav_pxd_dest))
-        #    shutil.copy2(libav_pxd_src, libav_pxd_dest)
-        #else:
-        #    warning("Could not copy libav.pxd: source ({}) or dest dir ({}) missing".format(libav_pxd_src, codec_dir))
+        # Copy all from include -> av/
+        #info("Copying PyAV packages from {} to {}".format(include_dir, av_pkg_dir))
+        #shutil.copytree(include_dir, av_pkg_dir, dirs_exist_ok=True)
 
         # Patch dictionary.pyx for str -> bytes coercion
         dict_pyx_path = os.path.join(av_pkg_dir, 'dictionary.pyx')
@@ -147,13 +137,50 @@ class PyAVRecipe(CythonRecipe):
         else:
             warning("core.pyx not found at {} - patch skipped".format(core_pyx_path))
 
+        # Patch audio/format.pyx for char* -> str decoding
+        audio_format_pyx_path = os.path.join(av_pkg_dir, 'audio', 'format.pyx')
+        if os.path.exists(audio_format_pyx_path):
+            info("Patching {} for Python 3 string handling".format(audio_format_pyx_path))
+            with open(audio_format_pyx_path, 'r') as f:
+                content = f.read()
+            
+            # Fix the line causing the error
+            content = content.replace(
+                'return <str>lib.av_get_sample_fmt_name(self.sample_fmt)',
+                'return lib.av_get_sample_fmt_name(self.sample_fmt).decode("utf-8")'
+            )
+
+            with open(audio_format_pyx_path, 'w') as f:
+                f.write(content)
+        else:
+            warning("audio/format.pyx not found at {} - patch skipped".format(audio_format_pyx_path))
+
+        # Patch video/format.pyx for const char* -> str decoding
+        video_format_pyx_path = os.path.join(av_pkg_dir, 'video', 'format.pyx')
+        if os.path.exists(video_format_pyx_path):
+            info("Patching {} for Python 3 string handling".format(video_format_pyx_path))
+            with open(video_format_pyx_path, 'r') as f:
+                content = f.read()
+            
+            # Fix the line causing the error
+            content = content.replace(
+                'return <str>self.ptr.name',
+                'return self.ptr.name.decode("utf-8")'
+            )
+
+            with open(video_format_pyx_path, 'w') as f:
+                f.write(content)
+        else:
+            warning("video/format.pyx not found at {} - patch skipped".format(video_format_pyx_path))
+
 
     def get_recipe_env(self, arch, with_flags_in_cc=True):
         env = super().get_recipe_env(arch)
         env['CYTHON_FLAGS'] = '-3str'
         build_dir = self.get_build_dir(arch.arch)
         av_pkg_dir = os.path.join(build_dir, "av")
-        env['CYTHONPATH'] = av_pkg_dir
+        include_dir = os.path.join(build_dir, "include")
+        env['CYTHONPATH'] = include_dir
 
         build_dir = Recipe.get_recipe("ffmpeg", self.ctx).get_build_dir(
             arch.arch
