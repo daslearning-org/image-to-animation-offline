@@ -22,6 +22,7 @@ class PyAVRecipe(CythonRecipe):
         build_dir = self.get_build_dir(arch.arch)
         av_pkg_dir = os.path.join(build_dir, "av")
         include_dir = os.path.join(build_dir, "include")
+        setup_py_path = os.path.join(build_dir, "setup.py")
 
         # Copy all from include -> av/
         #info("Copying PyAV packages from {} to {}".format(include_dir, av_pkg_dir))
@@ -172,6 +173,38 @@ class PyAVRecipe(CythonRecipe):
                 f.write(content)
         else:
             warning("video/format.pyx not found at {} - patch skipped".format(video_format_pyx_path))
+
+        # Patch setup.py to add custom build_ext command
+        if os.path.exists(setup_py_path):
+            info("Patching {} to use custom build_ext for setuptools compatibility".format(setup_py_path))
+            with open(setup_py_path, 'r') as f:
+                content = f.read()
+            
+            # Add custom build_ext class at the top of setup.py
+            custom_build_ext = """
+from setuptools.command.build_ext import build_ext as _build_ext
+from distutils.cmd import Command as DistutilsCommand
+
+class custom_build_ext(_build_ext):
+    def finalize_options(self):
+        super().finalize_options()
+        # Ensure compatibility with distutils checks
+        self.distribution.ext_modules = self.distribution.ext_modules or []
+        # Add distutils compatibility
+        self._is_command = True  # Mimic distutils Command behavior
+"""
+            content = custom_build_ext + "\n" + content
+            
+            # Modify setup() to use custom_build_ext
+            content = content.replace(
+                'setup(',
+                'setup(cmdclass={"build_ext": custom_build_ext},'
+            )
+
+            with open(setup_py_path, 'w') as f:
+                f.write(content)
+        else:
+            warning("setup.py not found at {} - patch skipped".format(setup_py_path))
 
 
     def get_recipe_env(self, arch, with_flags_in_cc=True):
