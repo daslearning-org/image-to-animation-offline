@@ -6,12 +6,12 @@ import os, shutil
 class PyAVRecipe(CythonRecipe):
 
     name = "av"
-    version = "10.0.0"
+    version = "13.1.0"
     url = "https://github.com/PyAV-Org/PyAV/archive/v{version}.zip"
 
     depends = ["python3", "cython", "ffmpeg", "av_codecs"]
     opt_depends = ["openssl"]
-    #patches = ['patches/compilation_syntax_errors.patch']
+    patches = ['patches/compilation_syntax_errors.patch']
     cythonize = True
     cythonize_flags = ["--directive", "language_level=3"]
 
@@ -74,17 +74,11 @@ class PyAVRecipe(CythonRecipe):
             info("Patching {} for Python 3 string handling".format(logging_pyx_path))
             with open(logging_pyx_path, 'r') as f:
                 content = f.read()
-
-            # Fix const char* -> str
+            
+            # Fix the line causing the error
             content = content.replace(
-                "name = <str>c_name if c_name is not NULL else ''",
+                'name = <str>c_name if c_name is not NULL else ""',
                 'name = c_name.decode("utf-8") if c_name is not NULL else ""'
-            )
-
-            # Fix str -> const char* for av_log varargs, remove this logging
-            content = content.replace(
-                'lib.av_log(<void*>obj, level, "%s", message)',
-                ""
             )
 
             with open(logging_pyx_path, 'w') as f:
@@ -162,25 +156,6 @@ class PyAVRecipe(CythonRecipe):
         else:
             warning("audio/format.pyx not found at {} - patch skipped".format(audio_format_pyx_path))
 
-        # Patch audio/layout.pyx for char[] -> str decoding
-        audio_layout_pyx_path = os.path.join(av_pkg_dir, 'audio', 'layout.pyx')
-        if os.path.exists(audio_layout_pyx_path):
-            info("Patching {} for Python 3 string handling".format(audio_layout_pyx_path))
-            with open(audio_layout_pyx_path, 'r') as f:
-                content = f.read()
-
-            #if not content.startswith("# cython: language_level=3str"):
-            #    content = "# cython: language_level=3str\n" + content
-            content = content.replace(
-                'return <str>out',
-                'return out.decode("utf-8")'
-            )
-
-            with open(audio_layout_pyx_path, 'w') as f:
-                f.write(content)
-        else:
-            warning("audio/layout.pyx not found at {} - patch skipped".format(audio_layout_pyx_path))
-
         # Patch video/format.pyx for const char* -> str decoding
         video_format_pyx_path = os.path.join(av_pkg_dir, 'video', 'format.pyx')
         if os.path.exists(video_format_pyx_path):
@@ -234,7 +209,7 @@ class custom_build_ext(_build_ext):
 
     def get_recipe_env(self, arch, with_flags_in_cc=True):
         env = super().get_recipe_env(arch)
-        env['CYTHONFLAGS'] = '-3' #'-3str'
+        env['CYTHON_FLAGS'] = '-3' #'-3str'
         build_dir = self.get_build_dir(arch.arch)
         av_pkg_dir = os.path.join(build_dir, "av")
         include_dir = os.path.join(build_dir, "include")

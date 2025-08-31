@@ -411,39 +411,6 @@ def common_divisors(num1, num2):
     common_divs.sort()  # Sort the list in ascending order
     return common_divs
 
-# IO wrapper for ffmpeg convert on android
-class IOWrapper:
-    def __init__(self, path: str | Path, mode="rb"):
-        self._file = open(path, mode)
-        self._mode = mode
-
-    # --- Read methods ---
-    def read(self, size=-1):
-        return self._file.read(size)
-
-    # --- Write methods ---
-    def write(self, data):
-        return self._file.write(data)
-
-    # --- Positioning ---
-    def seek(self, offset, whence=0):
-        return self._file.seek(offset, whence)
-
-    def tell(self):
-        return self._file.tell()
-
-    # --- State checks ---
-    def close(self):
-        return self._file.close()
-
-    def readable(self):
-        return "r" in self._mode
-
-    def writable(self):
-        return "w" in self._mode or "a" in self._mode
-
-    def seekable(self):
-        return True
 
 def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
     ff_stat = False
@@ -455,7 +422,7 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
         # <--- diag end
 
         src_path = Path(source_vid)
-        input_container = av.open(IOWrapper(src_path, "rb"), mode="r")
+        input_container = av.open(str(src_path), mode="r")
         output_container = av.open(str(dest_vid), mode="w")
         # ---> diagnostic code
         print("Format:", input_container.format.name)
