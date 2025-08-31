@@ -422,8 +422,8 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
         # <--- diag end
 
         src_path = Path(source_vid)
-        input_container = av.open(str(src_path), mode="r")
-        output_container = av.open(str(dest_vid), mode="w")
+        input_container = av.open(src_path, mode="r")
+        output_container = av.open(dest_vid, mode="w")
         # ---> diagnostic code
         print("Format:", input_container.format.name)
         for s in input_container.streams:
