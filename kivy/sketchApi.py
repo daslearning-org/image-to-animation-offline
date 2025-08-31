@@ -1,5 +1,7 @@
-import os
+import os, stat, shutil
 import sys
+import subprocess
+from pathlib import Path
 import time
 import math
 import json
@@ -410,6 +412,50 @@ def common_divisors(num1, num2):
     return common_divs
 
 
+def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
+    ff_stat = False
+    try:
+        import av
+        # ---> diagnostic code
+        print("PyAV:", av.__version__)
+        print("FFmpeg:", av.library_versions)
+        # <--- diag end
+
+        src_path = Path(source_vid)
+        input_container = av.open(src_path, mode="r")
+        output_container = av.open(dest_vid, mode="w")
+        # ---> diagnostic code
+        print("Format:", input_container.format.name)
+        for s in input_container.streams:
+            print("Stream:", s.type, s.codec_context.name)
+        # <--- diag end
+        in_stream = input_container.streams.video[0]
+        width = in_stream.codec_context.width
+        height = in_stream.codec_context.height
+        fps = in_stream.average_rate
+        # set output params
+        out_stream = output_container.add_stream("h264", rate=fps)
+        out_stream.width = width
+        out_stream.height = height
+        out_stream.pix_fmt = "yuv420p"
+        # Better quality control
+        out_stream.options = {"crf": "20"}  # adjust between 18–23
+        for frame in input_container.decode(video=0):
+            packet = out_stream.encode(frame)
+            if packet:
+                output_container.mux(packet)
+        packet = out_stream.encode(None)
+        if packet:
+            output_container.mux(packet)
+        output_container.close()
+        input_container.close()
+
+        print(f"ffmpeg convert success, converted file: {dest_vid}")
+        ff_stat = True
+    except Exception as e:
+        print(f"ffmpeg convert error: {e}")
+    return ff_stat
+
 def initiate_sketch(image_path, split_len, frame_rate, object_skip_rate, bg_object_skip_rate, main_img_duration, callback, save_path=save_path, which_platform="linux"):
     global platform
     platform = which_platform
@@ -426,6 +472,8 @@ def initiate_sketch(image_path, split_len, frame_rate, object_skip_rate, bg_obje
         else:
             video_save_name = f"vid_{current_date}_{current_time}.mp4" #mp4
         save_video_path = os.path.join(save_path, video_save_name)
+        ffmpeg_file_name = f"vid_{current_date}_{current_time}_h264.mp4"
+        ffmpeg_video_path = os.path.join(save_path, ffmpeg_file_name)
         os.makedirs(os.path.dirname(save_video_path), exist_ok=True)
         print("save_video_path: ", save_video_path)
 
@@ -454,7 +502,13 @@ def initiate_sketch(image_path, split_len, frame_rate, object_skip_rate, bg_obje
             draw_whiteboard_animations(
                 image_bgr, mask_path, hand_path, hand_mask_path, save_video_path, variables
             )
-            final_result = {"status": True, "message": f"{save_video_path}"}
+            ff_stat = ffmpeg_convert(source_vid=save_video_path, dest_vid=ffmpeg_video_path, platform=platform)
+            if ff_stat:
+                final_result = {"status": True, "message": f"{ffmpeg_video_path}"}
+                os.unlink(save_video_path)
+                print(f"removed raw video: {save_video_path}")
+            else:
+                final_result = {"status": True, "message": f"{save_video_path}"}
         except Exception as e:
             print(f"Error: {e}")
             final_result = {"status": False, "message": f"Error: {e}"}
