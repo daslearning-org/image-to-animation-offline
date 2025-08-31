@@ -411,6 +411,40 @@ def common_divisors(num1, num2):
     common_divs.sort()  # Sort the list in ascending order
     return common_divs
 
+# IO wrapper for ffmpeg convert on android
+class IOWrapper:
+    def __init__(self, path: str | Path, mode="rb"):
+        self._file = open(path, mode)
+        self._mode = mode
+
+    # --- Read methods ---
+    def read(self, size=-1):
+        return self._file.read(size)
+
+    # --- Write methods ---
+    def write(self, data):
+        return self._file.write(data)
+
+    # --- Positioning ---
+    def seek(self, offset, whence=0):
+        return self._file.seek(offset, whence)
+
+    def tell(self):
+        return self._file.tell()
+
+    # --- State checks ---
+    def close(self):
+        return self._file.close()
+
+    def readable(self):
+        return "r" in self._mode
+
+    def writable(self):
+        return "w" in self._mode or "a" in self._mode
+
+    def seekable(self):
+        return True
+
 def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
     ff_stat = False
     try:
@@ -419,11 +453,10 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
         print("PyAV:", av.__version__)
         print("FFmpeg:", av.library_versions)
         # <--- diag end
-        if platform == "android":
-            src_path = Path(source_vid)
-            input_container = av.open(file=src_path, mode="r")
-        else:
-            input_container = av.open(file=source_vid, mode="r")
+
+        src_path = Path(source_vid)
+        input_container = av.open(IOWrapper(src_path, "rb"), mode="r")
+        output_container = av.open(str(dest_vid), mode="w")
         # ---> diagnostic code
         print("Format:", input_container.format.name)
         for s in input_container.streams:
@@ -433,7 +466,7 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
         width = in_stream.codec_context.width
         height = in_stream.codec_context.height
         fps = in_stream.average_rate
-        output_container = av.open(file=dest_vid, mode="w")
+        # set output params
         out_stream = output_container.add_stream("h264", rate=fps)
         out_stream.width = width
         out_stream.height = height

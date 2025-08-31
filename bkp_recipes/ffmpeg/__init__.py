@@ -7,8 +7,8 @@ class FFMpegRecipe(Recipe):
     version = 'n6.1.2'
     # Moved to github.com instead of ffmpeg.org to improve download speed
     url = 'https://github.com/FFmpeg/FFmpeg/archive/{version}.zip'
-    depends = ['sdl2', 'libx264', 'ffpyplayer_codecs']  # Need this to build correct recipe order
-    opts_depends = ['openssl', 'av_codecs']
+    depends = ['sdl2', 'av_codecs']  # Need this to build correct recipe order
+    opts_depends = ['openssl', 'ffpyplayer_codecs']
     patches = ['patches/configure.patch']
 
     def should_build(self, arch):
@@ -77,19 +77,18 @@ class FFMpegRecipe(Recipe):
 
                 # Enable all codecs:
                 flags += [
-                    '--enable-parser=aac,ac3,h261,h264,mpegaudio,mpeg4video,mpegvideo,vc1',
-                    '--enable-decoder=aac,h264,mpeg4,mpegvideo',
-                    '--enable-encoder=h264,libx264,h264_mediacodec,mpeg4,mpeg2video,libvpx',
-                    '--enable-muxer=h264,mov,mp4,mpeg2video,avi',
-                    '--enable-demuxer=aac,h264,m4v,mov,mpegvideo,vc1,rtsp',
+                    '--enable-parsers',
+                    '--enable-decoders',
+                    '--enable-encoders',
+                    '--enable-muxers',
+                    '--enable-demuxers',
                 ]
             else:
                 # Enable codecs only for .mp4:
                 flags += [
                     '--enable-parser=aac,ac3,h261,h264,mpegaudio,mpeg4video,mpegvideo,vc1',
                     '--enable-decoder=aac,h264,mpeg4,mpegvideo',
-                    '--enable-encoder=h264,libx264,h264_mediacodec,mpeg4,mpeg2video',
-                    '--enable-muxer=h264,mov,mp4,mpeg2video,avi',
+                    '--enable-muxer=h264,mov,mp4,mpeg2video',
                     '--enable-demuxer=aac,h264,m4v,mov,mpegvideo,vc1,rtsp',
                 ]
 

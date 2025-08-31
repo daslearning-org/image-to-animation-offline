@@ -234,7 +234,7 @@ class custom_build_ext(_build_ext):
 
     def get_recipe_env(self, arch, with_flags_in_cc=True):
         env = super().get_recipe_env(arch)
-        env['CYTHON_FLAGS'] = '-3str'
+        env['CYTHONFLAGS'] = '-3' #'-3str'
         build_dir = self.get_build_dir(arch.arch)
         av_pkg_dir = os.path.join(build_dir, "av")
         include_dir = os.path.join(build_dir, "include")
