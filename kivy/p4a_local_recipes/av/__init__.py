@@ -56,11 +56,19 @@ class PyAVRecipe(CythonRecipe):
             info("Patching {} for Python 3 string handling".format(format_pyx_path))
             with open(format_pyx_path, 'r') as f:
                 content = f.read()
-            
+            custom_build_ext = """
+import sys
+def normalize_url(url):
+    fsenc = sys.getfilesystemencoding() or "utf-8"
+    if isinstance(url, bytes):
+        return url.decode(fsenc)   # bytes → str
+    return url
+"""
+            content = custom_build_ext + "\n" + content
             # Fix the line causing the error
             content = content.replace(
                 'format.name = optr.name if optr else iptr.name',
-                'format.name = optr.name.decode("utf-8") if optr else iptr.name.decode("utf-8")'
+                'format.name = normalize_url(optr.name) if optr else normalize_url(iptr.name)'
             )
 
             with open(format_pyx_path, 'w') as f:
@@ -74,11 +82,19 @@ class PyAVRecipe(CythonRecipe):
             info("Patching {} for Python 3 string handling".format(logging_pyx_path))
             with open(logging_pyx_path, 'r') as f:
                 content = f.read()
-            
+            custom_build_ext = """
+import sys
+def normalize_url(url):
+    fsenc = sys.getfilesystemencoding() or "utf-8"
+    if isinstance(url, bytes):
+        return url.decode(fsenc)   # bytes → str
+    return url
+"""
+            content = custom_build_ext + "\n" + content
             # Fix the line causing the error
             content = content.replace(
                 'name = <str>c_name if c_name is not NULL else ""',
-                'name = c_name.decode("utf-8") if c_name is not NULL else ""'
+                'name = normalize_url(c_name) if c_name is not NULL else ""'
             )
 
             with open(logging_pyx_path, 'w') as f:
@@ -126,11 +142,19 @@ class PyAVRecipe(CythonRecipe):
             info("Patching {} for Python 3 string handling".format(core_pyx_path))
             with open(core_pyx_path, 'r') as f:
                 content = f.read()
-            
+            custom_build_ext = """
+import sys
+def normalize_url(url):
+    fsenc = sys.getfilesystemencoding() or "utf-8"
+    if isinstance(url, bytes):
+        return url.decode(fsenc)   # bytes → str
+    return url
+"""
+            content = custom_build_ext + "\n" + content
             # Fix the line causing the error
             content = content.replace(
                 '<str>url if url is not NULL else ""',
-                'url.decode("utf-8") if url is not NULL else ""'
+                'normalize_url(url) if url is not NULL else ""'
             )
 
             with open(core_pyx_path, 'w') as f:
@@ -144,11 +168,19 @@ class PyAVRecipe(CythonRecipe):
             info("Patching {} for Python 3 string handling".format(audio_format_pyx_path))
             with open(audio_format_pyx_path, 'r') as f:
                 content = f.read()
-            
+            custom_build_ext = """
+import sys
+def normalize_url(url):
+    fsenc = sys.getfilesystemencoding() or "utf-8"
+    if isinstance(url, bytes):
+        return url.decode(fsenc)   # bytes → str
+    return url
+"""
+            content = custom_build_ext + "\n" + content
             # Fix the line causing the error
             content = content.replace(
                 'return <str>lib.av_get_sample_fmt_name(self.sample_fmt)',
-                'return lib.av_get_sample_fmt_name(self.sample_fmt).decode("utf-8")'
+                'return normalize_url(lib.av_get_sample_fmt_name(self.sample_fmt))'
             )
 
             with open(audio_format_pyx_path, 'w') as f:
@@ -162,11 +194,19 @@ class PyAVRecipe(CythonRecipe):
             info("Patching {} for Python 3 string handling".format(video_format_pyx_path))
             with open(video_format_pyx_path, 'r') as f:
                 content = f.read()
-            
+            custom_build_ext = """
+import sys
+def normalize_url(url):
+    fsenc = sys.getfilesystemencoding() or "utf-8"
+    if isinstance(url, bytes):
+        return url.decode(fsenc)   # bytes → str
+    return url
+"""
+            content = custom_build_ext + "\n" + content
             # Fix the line causing the error
             content = content.replace(
                 'return <str>self.ptr.name',
-                'return self.ptr.name.decode("utf-8")'
+                'return normalize_url(self.ptr.name)'
             )
 
             with open(video_format_pyx_path, 'w') as f:
