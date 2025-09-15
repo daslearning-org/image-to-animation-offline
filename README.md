@@ -46,7 +46,7 @@ sudo add-apt-repository ppa:deadsnakes/ppa
 sudo apt update
 
 # install all dependencies.
-sudo apt install -y ant autoconf automake ccache cmake g++ gcc lbzip2 libffi-dev libltdl-dev libtool libssl-dev make openjdk-17-jdk patch pkg-config python3-dev python3-pip unzip wget zip git python3.11 python3.11-venv python3.11-dev
+sudo apt install -y ant autoconf automake ccache cmake g++ gcc lbzip2 libffi-dev libltdl-dev libtool libssl-dev make openjdk-17-jdk patch patchelf pkg-config unzip wget zip git python3.11 python3.11-venv python3.11-dev # python3-dev python3-pip (if required)
 
 # optionally you may check the java installation with below commands
 java -version
