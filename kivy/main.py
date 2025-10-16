@@ -31,7 +31,7 @@ from screens.divider import MyMDDivider
 from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
     # Running as a PyInstaller bundle
@@ -89,10 +89,19 @@ class DlImg2SktchApp(MDApp):
         # paths setup
         if platform == "android":
             from android.permissions import request_permissions, Permission
-            request_permissions([
-                Permission.READ_EXTERNAL_STORAGE,
-                Permission.WRITE_EXTERNAL_STORAGE
-            ])
+            sdk_version = 28
+            try:
+                VERSION = autoclass('android.os.Build$VERSION')
+                sdk_version = VERSION.SDK_INT
+                print(f"Android SDK: {sdk_version}")
+                #self.show_toast_msg(f"Android SDK: {sdk_version}")
+            except Exception as e:
+                print(f"Could not check the android SDK version: {e}")
+            if sdk_version >= 33:  # Android 13+
+                permissions = [Permission.READ_MEDIA_IMAGES]
+            else:  # Android 9–12
+                permissions = [Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE]
+            request_permissions(permissions)
             context = autoclass('org.kivy.android.PythonActivity').mActivity
             android_path = context.getExternalFilesDir(None).getAbsolutePath()
             self.video_dir = os.path.join(android_path, 'generated')
@@ -123,7 +132,7 @@ class DlImg2SktchApp(MDApp):
         self.img_file_manager = MDFileManager(
             exit_manager=self.img_file_exit_manager,
             select_path=self.select_img_path,
-            ext=[".png", ".jpg", ".jpeg"],  # Restrict to image files
+            ext=[".png", ".jpg", ".jpeg", ".webp"],  # Restrict to image files
             selector="file",  # Restrict to selecting files only
             preview=True,
             #show_hidden_files=True,
@@ -223,7 +232,7 @@ class DlImg2SktchApp(MDApp):
     def open_img_file_manager(self):
         """Open the file manager to select an image file. On android use Downloads or Pictures folders only"""
         try:
-            self.img_file_manager.show(self.internal_storage)  # native app specific path
+            self.img_file_manager.show(self.external_storage)  # external storage
             self.is_img_manager_open = True
         except Exception as e:
             self.show_toast_msg(f"Error: {e}", is_error=True)

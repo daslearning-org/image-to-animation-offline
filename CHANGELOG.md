@@ -5,6 +5,10 @@
 
 ## Change Details
 
+### 0.2.2
+- Now we can select image from android phone memory's DCIM, Downloads or Pictures (sub-folder under this also works fine).
+- All logics remain same, so no change on desktop apps.
+
 ### 0.2.1
 - Adding ffmpeg convert step after the animation generation which reduces the video file size
 
