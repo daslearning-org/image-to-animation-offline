@@ -10,6 +10,41 @@
 # Import local components
 #:import MyMDDivider screens.divider.MyMDDivider
 
+<TempSpinWait>:
+    id: temp_spin
+    orientation: 'horizontal'
+    adaptive_height: True
+    padding: dp(8)
+
+    MDLabel:
+        text: "Please wait while generating the sketch..."
+        font_style: "Subtitle1"
+        adaptive_width: True
+
+    MDSpinner:
+        size_hint: None, None
+        size: dp(14), dp(14)
+        active: True
+
+<VideoActionBtn>:
+    orientation: 'horizontal'
+    spacing: dp(4)
+    adaptive_height: True
+    MDFloatingActionButton:
+        icon: 'download'
+        type: 'small'
+        theme_icon_color: "Custom"
+        md_bg_color: '#e9dff7'
+        icon_color: '#211c29'
+        on_release: app.open_vid_file_manager()
+    MDFloatingActionButton:
+        icon: 'delete'
+        type: 'small'
+        theme_icon_color: "Custom"
+        md_bg_color: '#e9dff7'
+        icon_color: '#211c29'
+        on_release: app.current_delete_alert()
+
 # The kivymd main screen
 MDScreen:
 

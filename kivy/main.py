@@ -13,6 +13,7 @@ from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.spinner import MDSpinner
 from kivymd.uix.filemanager import MDFileManager
 from kivymd.uix.dialog import MDDialog
+from kivymd.uix.boxlayout import MDBoxLayout
 
 from kivy.uix.videoplayer import VideoPlayer
 from kivy.lang import Builder
@@ -31,7 +32,7 @@ from screens.divider import MyMDDivider
 from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
-__version__ = "0.2.2"
+__version__ = "0.3.0"
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
     # Running as a PyInstaller bundle
@@ -41,6 +42,12 @@ else:
     base_path = os.path.dirname(os.path.abspath(__file__))
 kv_file_path = os.path.join(base_path, 'main_layout.kv')
 
+# custom kivymd/kivy classes
+class TempSpinWait(MDBoxLayout):
+    pass
+
+class VideoActionBtn(MDBoxLayout):
+    pass
 
 # app class
 class DlImg2SktchApp(MDApp):
@@ -66,6 +73,11 @@ class DlImg2SktchApp(MDApp):
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.accent_palette = "Orange"
         self.top_menu_items = {
+            "Delete old sketches": {
+                "icon": "delete",
+                "action": "clear",
+                "url": "",
+            },
             "Documentation": {
                 "icon": "file-document-check",
                 "action": "web",
@@ -80,7 +92,12 @@ class DlImg2SktchApp(MDApp):
                 "icon": "github",
                 "action": "update",
                 "url": "",
-            }
+            },
+            "Try Other Apps": {
+                "icon": "google-play",
+                "action": "web",
+                "url": "https://daslearning.in/apps/",
+            },
         }
         return Builder.load_file(kv_file_path)
 
@@ -118,14 +135,6 @@ class DlImg2SktchApp(MDApp):
             self.external_storage = os.path.abspath("/")
             self.video_dir = os.path.join(self.user_data_dir, 'generated')
         os.makedirs(self.video_dir, exist_ok=True)
-        test_file = os.path.join(self.video_dir, "test.txt")
-        try:
-            with open(test_file, 'w') as f:
-                f.write("Test write")
-            print(f"Successfully wrote to {test_file}")
-            os.remove(test_file)  # Clean up
-        except Exception as e:
-            print(f"Failed to write to {test_file}: {e}")
 
         # file managers
         self.is_img_manager_open = False
@@ -201,6 +210,8 @@ class DlImg2SktchApp(MDApp):
                 f"Your version: {__version__}",
                 buttons
             )
+        elif action == "clear":
+            self.all_delete_alert()
 
     def show_toast_msg(self, message, is_error=False):
         from kivymd.uix.snackbar import MDSnackbar
@@ -237,7 +248,7 @@ class DlImg2SktchApp(MDApp):
         except Exception as e:
             self.show_toast_msg(f"Error: {e}", is_error=True)
 
-    def open_vid_file_manager(self, instance):
+    def open_vid_file_manager(self):
         """Open the file manager to select destination folder. On android use Downloads or Videos folders only"""
         try:
             self.vid_file_manager.show(self.external_storage)
@@ -306,6 +317,44 @@ class DlImg2SktchApp(MDApp):
         self.is_vid_manager_open = False
         self.vid_file_manager.close()
 
+    def current_delete_alert(self):
+        filename = os.path.basename(self.vid_download_path)
+        self.show_text_dialog(
+            title="Delete this Video file?",
+            text=f"To be deleted: {filename}. This action cannot be undone!",
+            buttons=[
+                MDFlatButton(
+                    text="CANCEL",
+                    theme_text_color="Custom",
+                    text_color=self.theme_cls.primary_color,
+                    on_release=self.txt_dialog_closer
+                ),
+                MDFlatButton(
+                    text="DELETE",
+                    theme_text_color="Custom",
+                    text_color="red",
+                    on_release=self.confirm_delete_video
+                ),
+            ],
+        )
+
+    def confirm_delete_video(self, instance):
+        """
+        Called when delete is confirmed.
+        """
+        self.txt_dialog_closer(instance)
+        filename = os.path.basename(self.vid_download_path)
+        if self.vid_download_path != "":
+            try:
+                os.remove(self.vid_download_path)
+                self.vid_download_path = ""
+                player_box = self.root.ids.player_box
+                player_box.clear_widgets()
+                self.show_toast_msg(f"{filename} has been deleted!")
+            except Exception as e:
+                print(f"Error saving file: {e}")
+                self.show_toast_msg(f"Error deleting file: {e}", is_error=True)
+
     def submit_sketch_req(self):
         if self.image_path == "":
             self.show_toast_msg("No image is selected", is_error=True)
@@ -323,12 +372,7 @@ class DlImg2SktchApp(MDApp):
         self.is_cv2_running = True
         player_box = self.root.ids.player_box
         player_box.clear_widgets()
-        player_box.add_widget(MDSpinner(
-            size_hint = [None, None],
-            size = (dp(32), dp(32)),
-            active = True,
-            pos_hint={'center_x': .5, 'center_y': .5}
-        ))
+        player_box.add_widget(TempSpinWait())
 
     def task_complete_callback(self, result):
         status = result["status"]
@@ -343,15 +387,8 @@ class DlImg2SktchApp(MDApp):
                 source = message,
                 options={'fit_mode': 'contain'}
             )
-            down_btn = MDFloatingActionButton(
-                icon="download",
-                type="small",
-                theme_icon_color="Custom",
-                md_bg_color='#e9dff7',
-                icon_color='#211c29',
-            )
+            down_btn = VideoActionBtn()
             player_box.add_widget(player)
-            down_btn.bind(on_release=self.open_vid_file_manager)
             player_box.add_widget(down_btn)
             player.state = 'play'
         else:
@@ -378,6 +415,45 @@ class DlImg2SktchApp(MDApp):
         obj_skip_rate.text = "8"
         bck_skip_rate.text = "14"
         main_img_duration.text = "2"
+        player_box = self.root.ids.player_box
+        player_box.clear_widgets()
+
+    def all_delete_alert(self):
+        del_vid_count = 0
+        for filename in os.listdir(self.video_dir):
+            if filename.endswith(".mp4") or filename.endswith(".avi"):
+                del_vid_count += 1
+        self.show_text_dialog(
+            title="Delete all Sketch videos?",
+            text=f"There are total: {del_vid_count} video files. This action cannot be undone!",
+            buttons=[
+                MDFlatButton(
+                    text="CANCEL",
+                    theme_text_color="Custom",
+                    text_color=self.theme_cls.primary_color,
+                    on_release=self.txt_dialog_closer
+                ),
+                MDFlatButton(
+                    text="DELETE",
+                    theme_text_color="Custom",
+                    text_color="red",
+                    on_release=self.delete_action
+                ),
+            ],
+        )
+
+    def delete_action(self, instance):
+        # Custom function called when DISCARD is clicked
+        for filename in os.listdir(self.video_dir):
+            if filename.endswith(".mp4") or filename.endswith(".avi"):
+                file_path = os.path.join(self.video_dir, filename)
+                try:
+                    os.unlink(file_path)
+                    print(f"Deleted {file_path}")
+                except Exception as e:
+                    print(f"Could not delete the audion files, error: {e}")
+        self.show_toast_msg("Executed the video file cleanup!")
+        self.txt_dialog_closer(instance)
 
     def events(self, instance, keyboard, keycode, text, modifiers):
         """Handle mobile device button presses (e.g., Android back button)."""

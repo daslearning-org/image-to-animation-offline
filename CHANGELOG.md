@@ -5,6 +5,12 @@
 
 ## Change Details
 
+### 0.3.0
+- Added a delete button along with download button after sketch generation.
+- Dedicated cleanup button in the menu bar.
+- Added a link for `Other Open-Source Apps` from us.
+- A waiting message with spinner instead of just a spinner while generating skecth.
+
 ### 0.2.2
 - Now we can select image from android phone memory's DCIM, Downloads or Pictures (sub-folder under this also works fine).
 - All logics remain same, so no change on desktop apps.
