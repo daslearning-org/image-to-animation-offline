@@ -486,7 +486,6 @@ class DlImg2SktchApp(MDApp):
             
             self.is_cv2_running = True
             self.batch_queue.put("start")
-            self.img_file_count -= 1
             while self.img_file_count >= 1:
                 try:
                     q_message = self.batch_queue.get(timeout=1)
@@ -506,6 +505,7 @@ class DlImg2SktchApp(MDApp):
                 except:
                     # queue empty
                     continue
+            self.img_file_count -= 1
             if q_message == "stop":
                 #stop processing next files
                 break
