@@ -45,7 +45,7 @@ version.filename = %(source.dir)s/main.py
 # (list) Application requirements
 # /<your-codebase>/.buildozer/android/platform/build-arm64-v8a/build/python-installs/ttssts/arm64-v8a
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3, kivy==2.3.1, kivymd==1.2.0, pyjnius, android, docutils, filetype, pillow, Pygments, requests, numpy, ffmpeg, pyav, opencv, ffpyplayer
+requirements = python3, kivy==2.3.1, kivymd==1.2.0, pyjnius, android, docutils, filetype, pillow, Pygments, requests, numpy, ffmpeg, av, opencv, ffpyplayer
 # libx264, av_codecs,
 
 # (str) Custom source folders for requirements
@@ -120,7 +120,7 @@ android.minapi = 28
 #android.sdk = 20
 
 # (str) Android NDK version to use
-android.ndk = 28c
+android.ndk = 25b
 
 # This sets Gradle's maximum JVM heap size to 2048 megabytes (2GB).
 #android.gradle_properties = org.gradle.jvmargs=-Xmx2048m
@@ -328,13 +328,13 @@ android.allow_backup = True
 #
 
 # (str) python-for-android URL to use for checkout
-p4a.url = https://github.com/daslearning-org/p4a-unofficial.git
+#p4a.url = https://github.com/daslearning-org/p4a-unofficial.git
 
 # (str) python-for-android fork to use in case if p4a.url is not specified, defaults to upstream (kivy)
 #p4a.fork = kivy
 
 # (str) python-for-android branch to use, defaults to master
-p4a.branch = numpy2
+p4a.branch = develop
 
 # ... other configurations
 #pip.trusted_hosts = pypi.org files.pythonhosted.org
@@ -346,7 +346,7 @@ p4a.branch = numpy2
 #p4a.source_dir = ./libs
 
 # (str) The directory in which python-for-android should look for your own build recipes (if any)
-#p4a.local_recipes = ./p4a_local_recipes
+p4a.local_recipes = ./p4a_local_recipes
 
 # (str) Filename to the hook for p4a
 #p4a.hook =
