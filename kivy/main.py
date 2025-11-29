@@ -55,6 +55,9 @@ class VideoActionBtn(MDBoxLayout):
 class BatchImgFolderBtn(MDFillRoundFlatIconButton):
     pass
 
+class BatchStopBtn(MDBoxLayout):
+    pass
+
 # app class
 class DlImg2SktchApp(MDApp):
     split_len = NumericProperty(10)
@@ -346,7 +349,7 @@ class DlImg2SktchApp(MDApp):
 
     def select_vid_path(self, path: str):
         """
-        Called when a directory is selected. Save the Video file.
+        Called when a directory is selected. Save the Video file or zipped batch file.
         """
         import shutil
         filename = os.path.basename(self.vid_download_path)
@@ -443,9 +446,12 @@ class DlImg2SktchApp(MDApp):
                 player_box.clear_widgets()
                 player_box.add_widget(TempSpinWait(txt = "Please wait while generating the sketch files (batch)..."))
                 self.batch_progress = MDProgressBar(
-                    value = 0
+                    value = 0,
+                    pos_hint = {"center_x": .5, "center_y": .5},
+                    size_hint_y = 0.2
                 )
                 player_box.add_widget(self.batch_progress)
+                player_box.add_widget(BatchStopBtn())
                 self.batch_queue.put("start")
                 frame_rate = self.root.ids.frame_rate.text if self.root.ids.frame_rate.text != "" else self.frame_rate
                 obj_skip_rate = self.root.ids.obj_skip_rate.text if self.root.ids.obj_skip_rate.text != "" else self.obj_skip_rate
@@ -512,6 +518,10 @@ class DlImg2SktchApp(MDApp):
         print("Finished all files")
         Clock.schedule_once(lambda dt: self.batch_end_trigger())
 
+    def stop_batch(self):
+        if self.batch_process:
+            self.batch_queue.put("stop")
+
     def task_complete_callback(self, result):
         player_box = self.root.ids.player_box
         status = result["status"]
@@ -543,7 +553,6 @@ class DlImg2SktchApp(MDApp):
         player_box = self.root.ids.player_box
         player_box.clear_widgets()
         self.batch_progress.value = 100
-        print(self.batch_op_files)
         if len(self.batch_op_files) >= 1:
             import datetime
             now = datetime.datetime.now()
@@ -555,9 +564,14 @@ class DlImg2SktchApp(MDApp):
             with ZipFile(folder_zip_full, "w") as zip_obj:
                 for file in self.batch_op_files:
                     zip_obj.write(file, os.path.basename(file))
+                    os.remove(file)
             self.show_toast_msg(f"Batch process complete & output file is: {folder_zip_full}")
+            player_box.add_widget(MDLabel(text=f"Batch process complete & output file is: {folder_zip_full}"))
+            self.vid_download_path = folder_zip_full
+            down_btn = VideoActionBtn()
+            player_box.add_widget(down_btn)
         else:
-            self.show_toast_msg("No video files are generated in the batch!", is_error=True)
+            self.show_toast_msg("No video files were generated in the batch!", is_error=True)
 
     def batch_prog_updater(self, progress_val):
         self.batch_progress.value = progress_val
@@ -570,6 +584,7 @@ class DlImg2SktchApp(MDApp):
         main_img_duration = self.root.ids.main_img_duration
         # start reset
         self.image_path = ""
+        self.image_folder = ""
         self.split_len = 10
         menu_items = []
         self.split_len_options = MDDropdownMenu(
@@ -578,7 +593,7 @@ class DlImg2SktchApp(MDApp):
             items=menu_items,
         )
         self.split_len_drp.text = "speed"
-        img_selector_lbl.text = "Select an image file >"
+        img_selector_lbl.text = "Use the buttons to select image(s) >"
         frame_rate.text = "25"
         obj_skip_rate.text = "8"
         bck_skip_rate.text = "14"
@@ -589,11 +604,11 @@ class DlImg2SktchApp(MDApp):
     def all_delete_alert(self):
         del_vid_count = 0
         for filename in os.listdir(self.video_dir):
-            if filename.endswith(".mp4") or filename.endswith(".avi"):
+            if filename.endswith(".mp4") or filename.endswith(".avi") or filename.endswith(".zip"):
                 del_vid_count += 1
         self.show_text_dialog(
             title="Delete all Sketch videos?",
-            text=f"There are total: {del_vid_count} video files. This action cannot be undone!",
+            text=f"There are total: {del_vid_count} files. This action cannot be undone!",
             buttons=[
                 MDFlatButton(
                     text="CANCEL",
@@ -613,7 +628,7 @@ class DlImg2SktchApp(MDApp):
     def delete_action(self, instance):
         # Custom function called when DISCARD is clicked
         for filename in os.listdir(self.video_dir):
-            if filename.endswith(".mp4") or filename.endswith(".avi"):
+            if filename.endswith(".mp4") or filename.endswith(".avi") or filename.endswith(".zip"):
                 file_path = os.path.join(self.video_dir, filename)
                 try:
                     os.unlink(file_path)
