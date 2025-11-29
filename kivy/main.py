@@ -8,7 +8,7 @@ from threading import Thread
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDFlatButton, MDFloatingActionButton
+from kivymd.uix.button import MDFlatButton, MDFloatingActionButton, MDFillRoundFlatIconButton
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.spinner import MDSpinner
 from kivymd.uix.filemanager import MDFileManager
@@ -44,9 +44,12 @@ kv_file_path = os.path.join(base_path, 'main_layout.kv')
 
 # custom kivymd/kivy classes
 class TempSpinWait(MDBoxLayout):
-    pass
+    txt = StringProperty()
 
 class VideoActionBtn(MDBoxLayout):
+    pass
+
+class BatchImgFolderBtn(MDFillRoundFlatIconButton):
     pass
 
 # app class
@@ -62,6 +65,7 @@ class DlImg2SktchApp(MDApp):
     split_len_options = ObjectProperty()
     split_len_drp = ObjectProperty
     image_path = StringProperty("")
+    image_folder = StringProperty("")
     vid_download_path = StringProperty("")
     is_cv2_running = ObjectProperty()
 
@@ -72,6 +76,7 @@ class DlImg2SktchApp(MDApp):
     def build(self):
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.accent_palette = "Orange"
+        self.batch_process = False
         self.top_menu_items = {
             "Delete old sketches": {
                 "icon": "delete",
@@ -102,9 +107,10 @@ class DlImg2SktchApp(MDApp):
         return Builder.load_file(kv_file_path)
 
     def on_start(self):
-
+        file_m_height = 1
         # paths setup
         if platform == "android":
+            file_m_height = 0.9 # to be implemented with ndk#28
             from android.permissions import request_permissions, Permission
             sdk_version = 28
             try:
@@ -134,6 +140,18 @@ class DlImg2SktchApp(MDApp):
             self.internal_storage = os.path.abspath("/")
             self.external_storage = os.path.abspath("/")
             self.video_dir = os.path.join(self.user_data_dir, 'generated')
+
+            file_choose_grid = self.root.ids.file_choose_grid
+            img_selector_lbl = self.root.ids.img_selector_lbl
+            self.is_img_folder_open = False
+            self.img_fold_manager = MDFileManager(
+                exit_manager=self.img_fold_exit_manager,
+                select_path=self.select_img_folder,
+                selector="folder",  # Restrict to selecting directories only
+            )
+            fldr_btn = BatchImgFolderBtn()
+            file_choose_grid.add_widget(fldr_btn)
+            img_selector_lbl.text = "Select an image file or a folder with multiple images (batch) >"
         os.makedirs(self.video_dir, exist_ok=True)
 
         # file managers
@@ -248,6 +266,14 @@ class DlImg2SktchApp(MDApp):
         except Exception as e:
             self.show_toast_msg(f"Error: {e}", is_error=True)
 
+    def open_img_fldr_manager(self):
+        """Open the file manager to select an image file. On android use Downloads or Pictures folders only"""
+        try:
+            self.img_fold_manager.show(self.external_storage)  # external storage
+            self.is_img_folder_open = True
+        except Exception as e:
+            self.show_toast_msg(f"Error: {e}", is_error=True)
+
     def open_vid_file_manager(self):
         """Open the file manager to select destination folder. On android use Downloads or Videos folders only"""
         try:
@@ -256,8 +282,34 @@ class DlImg2SktchApp(MDApp):
         except Exception as e:
             self.show_toast_msg(f"Error: {e}", is_error=True)
 
+    def select_img_folder(self, path: str):
+        self.image_folder = path
+        self.image_path = ""
+        self.batch_process = True
+
+        img_box = self.root.ids.img_selector_lbl
+        img_box.text = f"Selected folder: {self.image_folder}"
+        split_lens = [10, 20, 40] # only this are the feasible option in bulk select
+        menu_items = [
+            {
+                "text": f"{option}",
+                "on_release": lambda x=f"{option}": self.set_split_len(x),
+                "font_size": sp(24)
+            } for option in split_lens
+        ]
+        self.split_len_options = MDDropdownMenu(
+            md_bg_color="#bdc6b0",
+            caller=self.split_len_drp,
+            items=menu_items,
+        )
+        self.split_len = 10
+        self.split_len_drp.text = str(self.split_len)
+        print(f"Initial split len: {self.split_len}")
+
     def select_img_path(self, path: str):
         self.image_path = path
+        self.image_folder = ""
+        self.batch_process = False
         api_resp = get_split_lens(path)
         split_lens = api_resp["split_lens"]
         image_details = api_resp["image_res"]
@@ -317,6 +369,11 @@ class DlImg2SktchApp(MDApp):
         self.is_vid_manager_open = False
         self.vid_file_manager.close()
 
+    def img_fold_exit_manager(self, *args):
+        """Called when the user reaches the root of the directory tree."""
+        self.is_img_folder_open = False
+        self.img_fold_manager.close()
+
     def current_delete_alert(self):
         filename = os.path.basename(self.vid_download_path)
         self.show_text_dialog(
@@ -356,23 +413,31 @@ class DlImg2SktchApp(MDApp):
                 self.show_toast_msg(f"Error deleting file: {e}", is_error=True)
 
     def submit_sketch_req(self):
-        if self.image_path == "":
-            self.show_toast_msg("No image is selected", is_error=True)
-            return
-        if self.is_cv2_running:
-            self.show_toast_msg("Please wait for the previous request to finish", is_error=True)
-            return
-        split_len = self.split_len
-        frame_rate = self.root.ids.frame_rate.text if self.root.ids.frame_rate.text != "" else self.frame_rate
-        obj_skip_rate = self.root.ids.obj_skip_rate.text if self.root.ids.obj_skip_rate.text != "" else self.obj_skip_rate
-        bck_skip_rate = self.root.ids.bck_skip_rate.text if self.root.ids.bck_skip_rate.text != "" else self.bck_skip_rate
-        main_img_duration = self.root.ids.main_img_duration.text if self.root.ids.main_img_duration.text != "" else self.main_img_duration
-        sketch_thread = Thread(target=initiate_sketch, args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform), daemon=True)
-        sketch_thread.start()
-        self.is_cv2_running = True
-        player_box = self.root.ids.player_box
-        player_box.clear_widgets()
-        player_box.add_widget(TempSpinWait())
+        if self.batch_process:
+            if self.image_folder == "":
+                self.show_toast_msg("No folder is selected for batch process", is_error=True)
+                return
+            if self.is_cv2_running:
+                self.show_toast_msg("Please wait for the previous request to finish", is_error=True)
+                return
+        else:
+            if self.image_path == "":
+                self.show_toast_msg("No image is selected", is_error=True)
+                return
+            if self.is_cv2_running:
+                self.show_toast_msg("Please wait for the previous request to finish", is_error=True)
+                return
+            split_len = self.split_len
+            frame_rate = self.root.ids.frame_rate.text if self.root.ids.frame_rate.text != "" else self.frame_rate
+            obj_skip_rate = self.root.ids.obj_skip_rate.text if self.root.ids.obj_skip_rate.text != "" else self.obj_skip_rate
+            bck_skip_rate = self.root.ids.bck_skip_rate.text if self.root.ids.bck_skip_rate.text != "" else self.bck_skip_rate
+            main_img_duration = self.root.ids.main_img_duration.text if self.root.ids.main_img_duration.text != "" else self.main_img_duration
+            sketch_thread = Thread(target=initiate_sketch, args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform), daemon=True)
+            sketch_thread.start()
+            self.is_cv2_running = True
+            player_box = self.root.ids.player_box
+            player_box.clear_widgets()
+            player_box.add_widget(TempSpinWait(txt = "Please wait while generating the sketch..."))
 
     def task_complete_callback(self, result):
         status = result["status"]
