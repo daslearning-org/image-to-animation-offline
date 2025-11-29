@@ -502,12 +502,16 @@ def initiate_sketch(image_path, split_len, frame_rate, object_skip_rate, bg_obje
             draw_whiteboard_animations(
                 image_bgr, mask_path, hand_path, hand_mask_path, save_video_path, variables
             )
-            ff_stat = ffmpeg_convert(source_vid=save_video_path, dest_vid=ffmpeg_video_path, platform=platform)
-            if ff_stat:
-                final_result = {"status": True, "message": f"{ffmpeg_video_path}"}
-                os.unlink(save_video_path)
-                print(f"removed raw video: {save_video_path}")
-            else:
+            try:
+                ff_stat = ffmpeg_convert(source_vid=save_video_path, dest_vid=ffmpeg_video_path, platform=platform)
+                if ff_stat:
+                    final_result = {"status": True, "message": f"{ffmpeg_video_path}"}
+                    os.unlink(save_video_path)
+                    print(f"removed raw video: {save_video_path}")
+                else:
+                    final_result = {"status": True, "message": f"{save_video_path}"}
+            except Exception as e:
+                print(f"FFMPEG Error: {e}")
                 final_result = {"status": True, "message": f"{save_video_path}"}
         except Exception as e:
             print(f"Error: {e}")

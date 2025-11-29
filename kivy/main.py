@@ -3,6 +3,7 @@ import os
 os.environ['KIVY_GL_BACKEND'] = 'sdl2'
 import sys
 from threading import Thread
+import queue
 
 # kivy world
 from kivymd.app import MDApp
@@ -14,12 +15,14 @@ from kivymd.uix.spinner import MDSpinner
 from kivymd.uix.filemanager import MDFileManager
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.progressbar import MDProgressBar
 
 from kivy.uix.videoplayer import VideoPlayer
 from kivy.lang import Builder
 from kivy.core.window import Window
 from kivy.metrics import dp, sp
 from kivy.utils import platform
+from kivy.clock import Clock
 from kivy.properties import StringProperty, NumericProperty, ObjectProperty
 if platform == "android":
     from jnius import autoclass, PythonJavaClass, java_method
@@ -77,6 +80,7 @@ class DlImg2SktchApp(MDApp):
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.accent_palette = "Orange"
         self.batch_process = False
+        self.img_file_count = 0
         self.top_menu_items = {
             "Delete old sketches": {
                 "icon": "delete",
@@ -283,6 +287,7 @@ class DlImg2SktchApp(MDApp):
             self.show_toast_msg(f"Error: {e}", is_error=True)
 
     def select_img_folder(self, path: str):
+        self.img_fold_exit_manager()
         self.image_folder = path
         self.image_path = ""
         self.batch_process = True
@@ -413,12 +418,43 @@ class DlImg2SktchApp(MDApp):
                 self.show_toast_msg(f"Error deleting file: {e}", is_error=True)
 
     def submit_sketch_req(self):
+        player_box = self.root.ids.player_box
         if self.batch_process:
             if self.image_folder == "":
                 self.show_toast_msg("No folder is selected for batch process", is_error=True)
                 return
             if self.is_cv2_running:
                 self.show_toast_msg("Please wait for the previous request to finish", is_error=True)
+                return
+            self.batch_queue = queue.Queue()
+            self.batch_op_files = []
+            
+            img_file_list = []
+            img_extensions = [".png", ".jpg", ".jpeg", ".webp"]
+            for file in os.listdir(self.image_folder):
+                file_path_wo_ext, ext = os.path.splitext(file)
+                if ext in img_extensions:
+                    img_file_list.append(file)
+                    self.img_file_count += 1
+            print(f"Number of files in the batch: {self.img_file_count}")
+
+            if self.img_file_count >= 1:
+                #process batch
+                player_box.clear_widgets()
+                player_box.add_widget(TempSpinWait(txt = "Please wait while generating the sketch files (batch)..."))
+                self.batch_progress = MDProgressBar(
+                    value = 0
+                )
+                player_box.add_widget(self.batch_progress)
+                self.batch_queue.put("start")
+                frame_rate = self.root.ids.frame_rate.text if self.root.ids.frame_rate.text != "" else self.frame_rate
+                obj_skip_rate = self.root.ids.obj_skip_rate.text if self.root.ids.obj_skip_rate.text != "" else self.obj_skip_rate
+                bck_skip_rate = self.root.ids.bck_skip_rate.text if self.root.ids.bck_skip_rate.text != "" else self.bck_skip_rate
+                main_img_duration = self.root.ids.main_img_duration.text if self.root.ids.main_img_duration.text != "" else self.main_img_duration
+                batch_thread = Thread(target=self.batch_loop, args=(img_file_list, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration)), daemon=True)
+                batch_thread.start()
+            else:
+                self.show_toast_msg("There is no image file in the selected folder!", is_error=True)
                 return
         else:
             if self.image_path == "":
@@ -435,29 +471,96 @@ class DlImg2SktchApp(MDApp):
             sketch_thread = Thread(target=initiate_sketch, args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform), daemon=True)
             sketch_thread.start()
             self.is_cv2_running = True
-            player_box = self.root.ids.player_box
             player_box.clear_widgets()
             player_box.add_widget(TempSpinWait(txt = "Please wait while generating the sketch..."))
 
+    def batch_loop(self, img_file_list, frame_rate, obj_skip_rate, bck_skip_rate, main_img_duration):
+        split_len = self.split_len
+        progress_val = 0
+        progress_steps = int(100/self.img_file_count)
+        q_message = "start"
+        for file in img_file_list:
+            full_img_path = os.path.join(self.image_folder, file)
+            sketch_thread = Thread(target=initiate_sketch, args=(full_img_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform), daemon=True)
+            sketch_thread.start()
+            
+            self.is_cv2_running = True
+            self.batch_queue.put("start")
+            self.img_file_count -= 1
+            while self.img_file_count >= 1:
+                try:
+                    q_message = self.batch_queue.get(timeout=1)
+                    if q_message == "wait":
+                        # no action needed, need to wait for the current conversion
+                        continue
+                    elif q_message == "next":
+                        # break the process
+                        self.is_cv2_running = False
+                        progress_val += progress_steps
+                        Clock.schedule_once(lambda dt: self.batch_prog_updater(progress_val))
+                        break
+                    elif q_message == "stop":
+                        break
+                    else:
+                        continue
+                except:
+                    # queue empty
+                    continue
+            if q_message == "stop":
+                #stop processing next files
+                break
+        print("Finished all files")
+        Clock.schedule_once(lambda dt: self.batch_end_trigger())
+
     def task_complete_callback(self, result):
-        status = result["status"]
         player_box = self.root.ids.player_box
+        status = result["status"]
         message = result["message"]
         self.is_cv2_running = False
         if status is True:
-            self.vid_download_path = message
-            self.show_toast_msg(f"Video generated at: {message}")
-            player_box.clear_widgets()
-            player = VideoPlayer(
-                source = message,
-                options={'fit_mode': 'contain'}
-            )
-            down_btn = VideoActionBtn()
-            player_box.add_widget(player)
-            player_box.add_widget(down_btn)
-            player.state = 'play'
+            if self.batch_process:
+                self.batch_queue.put("next")
+                self.batch_op_files.append(message)
+            else:
+                self.vid_download_path = message
+                self.show_toast_msg(f"Video generated at: {message}")
+                player_box.clear_widgets()
+                player = VideoPlayer(
+                    source = message,
+                    options={'fit_mode': 'contain'}
+                )
+                down_btn = VideoActionBtn()
+                player_box.add_widget(player)
+                player_box.add_widget(down_btn)
+                player.state = 'play'
         else:
             self.show_toast_msg(message, is_error=True)
+            if self.batch_process:
+                self.batch_queue.put("next")
+
+    def batch_end_trigger(self):
+        # All completed triggered
+        player_box = self.root.ids.player_box
+        player_box.clear_widgets()
+        self.batch_progress.value = 100
+        print(self.batch_op_files)
+        if len(self.batch_op_files) >= 1:
+            import datetime
+            now = datetime.datetime.now()
+            current_time = str(now.strftime("%H%M%S"))
+            current_date = str(now.strftime("%Y%m%d"))
+            folder_zip = f"bat_{current_date}_{current_time}.zip"
+            folder_zip_full = os.path.join(self.video_dir, folder_zip) 
+            from zipfile import ZipFile
+            with ZipFile(folder_zip_full, "w") as zip_obj:
+                for file in self.batch_op_files:
+                    zip_obj.write(file, os.path.basename(file))
+            self.show_toast_msg(f"Batch process complete & output file is: {folder_zip_full}")
+        else:
+            self.show_toast_msg("No video files are generated in the batch!", is_error=True)
+
+    def batch_prog_updater(self, progress_val):
+        self.batch_progress.value = progress_val
 
     def reset_all(self):
         img_selector_lbl = self.root.ids.img_selector_lbl
