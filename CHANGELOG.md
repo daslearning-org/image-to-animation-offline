@@ -12,6 +12,7 @@
 - Dedicated cleanup button in the menu bar.
 - Added a link for `Other Open-Source Apps` from us.
 - A waiting message with spinner instead of just a spinner while generating skecth.
+- A button to choose if we want the original image or the grayscale image to be shown as end image of the sketch video.
 
 #### Desktop only changes:
 - You can now select a folder & all images will be used to create multiple sketch videos (batch process).
