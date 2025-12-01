@@ -662,6 +662,8 @@ class DlImg2SktchApp(MDApp):
                     print(f"Could not delete the audion files, error: {e}")
         self.show_toast_msg("Executed the video file cleanup!")
         self.txt_dialog_closer(instance)
+        player_box = self.root.ids.player_box
+        player_box.clear_widgets()
 
     def events(self, instance, keyboard, keycode, text, modifiers):
         """Handle mobile device button presses (e.g., Android back button)."""

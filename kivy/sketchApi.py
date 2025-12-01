@@ -353,7 +353,7 @@ def draw_whiteboard_animations(
     if end_color:
         end_img = variables.img
     else:
-        end_img = cv2.cvtColor(variables.img_gray, cv2.COLOR_GRAY2BGR)
+        end_img = cv2.cvtColor(variables.img_thresh, cv2.COLOR_GRAY2BGR)
 
     # Ending the video with original original image
     for i in range(variables.frame_rate * variables.end_gray_img_duration_in_sec):
