@@ -83,6 +83,7 @@ class DlImg2SktchApp(MDApp):
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.accent_palette = "Orange"
         self.batch_process = False
+        self.end_color = True
         self.img_file_count = 0
         self.top_menu_items = {
             "Delete old sketches": {
@@ -420,6 +421,21 @@ class DlImg2SktchApp(MDApp):
                 print(f"Error saving file: {e}")
                 self.show_toast_msg(f"Error deleting file: {e}", is_error=True)
 
+    def set_end_img_color(self):
+        btn_end_img = self.root.ids.btn_end_img
+        if self.end_color:
+            btn_end_img.icon = "toggle-switch-off"
+            btn_end_img.icon_color = "white"
+            btn_end_img.text_color = "white"
+            btn_end_img.md_bg_color = "gray"
+            self.end_color = False
+        else:
+            btn_end_img.icon = "toggle-switch"
+            btn_end_img.icon_color = "magenta"
+            btn_end_img.text_color = "black"
+            btn_end_img.md_bg_color = "pink"
+            self.end_color = True
+
     def submit_sketch_req(self):
         player_box = self.root.ids.player_box
         if self.batch_process:
@@ -474,7 +490,7 @@ class DlImg2SktchApp(MDApp):
             obj_skip_rate = self.root.ids.obj_skip_rate.text if self.root.ids.obj_skip_rate.text != "" else self.obj_skip_rate
             bck_skip_rate = self.root.ids.bck_skip_rate.text if self.root.ids.bck_skip_rate.text != "" else self.bck_skip_rate
             main_img_duration = self.root.ids.main_img_duration.text if self.root.ids.main_img_duration.text != "" else self.main_img_duration
-            sketch_thread = Thread(target=initiate_sketch, args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform), daemon=True)
+            sketch_thread = Thread(target=initiate_sketch, args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform, self.end_color), daemon=True)
             sketch_thread.start()
             self.is_cv2_running = True
             player_box.clear_widgets()
@@ -487,9 +503,9 @@ class DlImg2SktchApp(MDApp):
         q_message = "start"
         for file in img_file_list:
             full_img_path = os.path.join(self.image_folder, file)
-            sketch_thread = Thread(target=initiate_sketch, args=(full_img_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform), daemon=True)
+            sketch_thread = Thread(target=initiate_sketch, args=(full_img_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform, self.end_color), daemon=True)
             sketch_thread.start()
-            
+
             self.is_cv2_running = True
             self.batch_queue.put("start")
             while self.img_file_count >= 1:
@@ -593,13 +609,22 @@ class DlImg2SktchApp(MDApp):
             items=menu_items,
         )
         self.split_len_drp.text = "speed"
-        img_selector_lbl.text = "Use the buttons to select image(s) >"
+        if platform == "android":
+            img_selector_lbl.text = "Use the button to select an image >"
+        else:
+            img_selector_lbl.text = "Select an image file or a folder with multiple images (batch) >"
         frame_rate.text = "25"
         obj_skip_rate.text = "8"
         bck_skip_rate.text = "14"
         main_img_duration.text = "2"
         player_box = self.root.ids.player_box
         player_box.clear_widgets()
+        btn_end_img = self.root.ids.btn_end_img
+        btn_end_img.icon = "toggle-switch"
+        btn_end_img.icon_color = "magenta"
+        btn_end_img.text_color = "black"
+        btn_end_img.md_bg_color = "pink"
+        self.end_color = True
 
     def all_delete_alert(self):
         del_vid_count = 0

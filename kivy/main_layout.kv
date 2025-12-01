@@ -161,7 +161,7 @@ MDScreen:
                 size_hint_x: 0.2
 
             MDLabel:
-                text: "Main image duration"
+                text: "End image duration"
                 font_style: 'Caption'
                 size_hint_y: None
                 height: self.texture_size[1]
@@ -231,14 +231,16 @@ MDScreen:
             padding: 14, 0, 14, 0 # left, top, right, bottom
 
             MDFillRoundFlatIconButton:
-                id: btn_reset
-                text: "Reset"
-                icon: "undo-variant"
+                id: btn_end_img
+                text: "End Colour"
+                text_color: 'black'
+                icon: "toggle-switch"
+                icon_color: "magenta"
                 font_size: sp(18)
-                md_bg_color: '#333036'
+                md_bg_color: 'pink'
                 pos_hint: {"center_x": .5, "center_y": .5}
                 size_hint_x: 0.2
-                on_release: app.reset_all()
+                on_release: app.set_end_img_color()
 
             MDFillRoundFlatIconButton:
                 id: btn_submit
@@ -251,11 +253,11 @@ MDScreen:
                 on_release: app.submit_sketch_req()
 
             MDFillRoundFlatIconButton:
-                id: btn_help
-                text: "Demo"
-                icon: "youtube"
+                id: btn_reset
+                text: "Reset"
+                icon: "undo-variant"
                 font_size: sp(18)
-                md_bg_color: '#bd3c94'
+                md_bg_color: '#333036'
                 pos_hint: {"center_x": .5, "center_y": .5}
                 size_hint_x: 0.2
-                on_release: app.open_demo_video()
+                on_release: app.reset_all()

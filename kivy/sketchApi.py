@@ -251,7 +251,7 @@ def draw_masked_object(
 
 
 def draw_whiteboard_animations(
-    img, mask_path, hand_path, hand_mask_path, save_video_path, variables
+    img, mask_path, hand_path, hand_mask_path, save_video_path, variables, end_color=True
 ):
     if mask_path is not None:
         object_mask_exists = True
@@ -349,9 +349,16 @@ def draw_whiteboard_animations(
             skip_rate=variables.object_skip_rate,
         )
 
+    # User can select if they want a colour image or grayscale image shown at the end
+    if end_color:
+        end_img = variables.img
+    else:
+        end_img = cv2.cvtColor(variables.img_gray, cv2.COLOR_GRAY2BGR)
+
     # Ending the video with original original image
     for i in range(variables.frame_rate * variables.end_gray_img_duration_in_sec):
-        variables.video_object.write(variables.img)
+        #variables.video_object.write(variables.img)
+        variables.video_object.write(end_img)
 
     # Calculating the total execution time
     end_time = time.time()
@@ -456,7 +463,9 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
         print(f"ffmpeg convert error: {e}")
     return ff_stat
 
-def initiate_sketch(image_path, split_len, frame_rate, object_skip_rate, bg_object_skip_rate, main_img_duration, callback, save_path=save_path, which_platform="linux"):
+def initiate_sketch(
+        image_path, split_len, frame_rate, object_skip_rate, bg_object_skip_rate, main_img_duration, callback, save_path=save_path,
+        which_platform="linux", end_color=True ):
     global platform
     platform = which_platform
     final_result = {"status": False, "message": "Initial load"}
@@ -500,7 +509,8 @@ def initiate_sketch(image_path, split_len, frame_rate, object_skip_rate, bg_obje
         # invoking the drawing function
         try:
             draw_whiteboard_animations(
-                image_bgr, mask_path, hand_path, hand_mask_path, save_video_path, variables
+                image_bgr, mask_path, hand_path, hand_mask_path, save_video_path, variables,
+                end_color
             )
             try:
                 ff_stat = ffmpeg_convert(source_vid=save_video_path, dest_vid=ffmpeg_video_path, platform=platform)
