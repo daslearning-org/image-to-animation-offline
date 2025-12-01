@@ -10,6 +10,64 @@
 # Import local components
 #:import MyMDDivider screens.divider.MyMDDivider
 
+<TempSpinWait>:
+    id: temp_spin
+    orientation: 'horizontal'
+    adaptive_height: True
+    padding: dp(8)
+
+    MDLabel:
+        text: root.txt
+        font_style: "Subtitle1"
+        adaptive_width: True
+
+    MDSpinner:
+        size_hint: None, None
+        size: dp(14), dp(14)
+        active: True
+
+<BatchStopBtn>:
+    orientation: 'horizontal'
+    spacing: dp(4)
+    adaptive_height: True
+    MDFloatingActionButton:
+        icon: 'stop'
+        type: 'small'
+        theme_icon_color: "Custom"
+        md_bg_color: '#e9dff7'
+        icon_color: '#211c29'
+        on_release: app.stop_batch()
+
+<VideoActionBtn>:
+    orientation: 'horizontal'
+    spacing: dp(4)
+    adaptive_height: True
+    MDFloatingActionButton:
+        icon: 'download'
+        type: 'small'
+        theme_icon_color: "Custom"
+        md_bg_color: '#e9dff7'
+        icon_color: '#211c29'
+        on_release: app.open_vid_file_manager()
+    MDFloatingActionButton:
+        icon: 'delete'
+        type: 'small'
+        theme_icon_color: "Custom"
+        md_bg_color: '#e9dff7'
+        icon_color: '#211c29'
+        on_release: app.current_delete_alert()
+
+<BatchImgFolderBtn>:
+    id: btn_img_fldr
+    text: "Batch"
+    icon: "folder"
+    font_size: sp(18)
+    md_bg_color: '#635a05'
+    pos_hint: {"center_x": .5, "center_y": .5}
+    #size_hint_x: 0.3
+    #size_hint_y: 0.9
+    on_release: app.open_img_fldr_manager()
+
 # The kivymd main screen
 MDScreen:
 
@@ -24,8 +82,10 @@ MDScreen:
             md_bg_color: '#7643a8'
 
         MDGridLayout: # top file browser
-            cols: 2
+            id: file_choose_grid
+            cols: 4
             size_hint_y: 0.1
+            spacing: dp(4)
             padding: 8, 10, 8, 10 # left, top, right, bottom
 
             MDLabel:
@@ -45,18 +105,19 @@ MDScreen:
                 font_size: sp(18)
                 #md_bg_color: '#f8d7e3'
                 pos_hint: {"center_x": .5, "center_y": .5}
-                size_hint_x: 0.3
+                #size_hint_x: 0.3
                 #size_hint_y: 0.9
                 on_release: app.open_img_file_manager()
 
-            MyMDDivider:
-                color: (0, 0, 0, 0.25)
+        MyMDDivider:
+            color: (0, 0, 0, 0.25)
 
         MDGridLayout: # video player
             id: player_box
             cols: 1
             size_hint_y: 0.5
             padding: 2, 10, 2, 10 # left, top, right, bottom
+            spacing: dp(4)
 
             # video player will be added under this box from main program
 
@@ -100,7 +161,7 @@ MDScreen:
                 size_hint_x: 0.2
 
             MDLabel:
-                text: "Main image duration"
+                text: "End image duration"
                 font_style: 'Caption'
                 size_hint_y: None
                 height: self.texture_size[1]
@@ -170,14 +231,16 @@ MDScreen:
             padding: 14, 0, 14, 0 # left, top, right, bottom
 
             MDFillRoundFlatIconButton:
-                id: btn_reset
-                text: "Reset"
-                icon: "undo-variant"
+                id: btn_end_img
+                text: "End Colour"
+                text_color: 'black'
+                icon: "toggle-switch"
+                icon_color: "magenta"
                 font_size: sp(18)
-                md_bg_color: '#333036'
+                md_bg_color: 'pink'
                 pos_hint: {"center_x": .5, "center_y": .5}
                 size_hint_x: 0.2
-                on_release: app.reset_all()
+                on_release: app.set_end_img_color()
 
             MDFillRoundFlatIconButton:
                 id: btn_submit
@@ -190,11 +253,11 @@ MDScreen:
                 on_release: app.submit_sketch_req()
 
             MDFillRoundFlatIconButton:
-                id: btn_help
-                text: "Demo"
-                icon: "youtube"
+                id: btn_reset
+                text: "Reset"
+                icon: "undo-variant"
                 font_size: sp(18)
-                md_bg_color: '#bd3c94'
+                md_bg_color: '#333036'
                 pos_hint: {"center_x": .5, "center_y": .5}
                 size_hint_x: 0.2
-                on_release: app.open_demo_video()
+                on_release: app.reset_all()

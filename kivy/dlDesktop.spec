@@ -5,8 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=['.'],
     binaries=[],
-    datas=collect_data_files('kivy') + # add all paths which are required
-    [
+    datas=[
         ('data', 'data'),
         ('screens', 'screens'),
         ('main_layout.kv', '.')
@@ -31,7 +30,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='dlImg2Sketch',
+    name='Img2Sketch',
     icon='data/images/favicon.ico',
     debug=False,
     bootloader_ignore_signals=False,
