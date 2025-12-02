@@ -1,7 +1,16 @@
 # 📷 ➜ ▶️ Offline Image to Animation Maker
-An open-source, cross-platform, offline app for Android, Linux, Windows, Mac & iOS (Mac & iOS apps are not built by us, but can be done using the documentation). Just upload an image & generate a sketch style animation video file in seconds or munites (depends on device) without an Internet connection.
+An open-source, cross-platform, offline app for Android, Linux, Windows, Mac & iOS (Mac & iOS apps are not built by us, but can be done using the documentation). Just upload an image (batch processing is possible on desktop platform by selecting a folder) & generate a sketch style animation video file(s) in seconds or munites (depends on device) without an Internet connection.
 
 > Overview: The app uses KivyMD and Kivy mainly for the UI. The app uses `Numpy` & `OpenCV` as the logic backbone which generates the video from an image.
+
+### 🤔 Why would you choose our app? (Features)
+👉 Generate White-board drawing style sketch animation just from an image. <br>
+👉 No internet connection is required, completely `Offline`. <br>
+👉 Available on Android, Windows & Linux. Can run on any OS using `Python`. <br>
+👉 No subscription, watermark, completely `open-source`. <br>
+👉 Configurable speed, frame rate & few other params to control the video lenght & speed. <br>
+👉 We can also choose whether we want to show the original image (colour) or the grayscale (with Gaussian blur) image at the end of the sketch & for how long (in number of seconds). <br>
+👉 Now, we can choose a `folder` to create multiple videos from multiple images (all images in the selected folder) in a single batch (queue) on `desktop` versions only. [Not available on Android] <br>
 
 ## 📽️ Demo
 You can click on the below Image or this [Youtube Link](https://www.youtube.com/watch?v=_UuAIjSzUJQ) to see the demo. Please let me know in the comments, how do you feel about this App. <br>
