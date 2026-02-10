@@ -22,6 +22,7 @@ hand_path = os.path.join(images_path, 'drawing-hand.png')
 hand_mask_path = os.path.join(images_path, 'hand-mask.png')
 save_path = os.path.join(base_path, "save_videos")
 platform = "linux"
+progress_updater = None
 
 ## All functions
 def euc_dist(arr1, point):
@@ -195,6 +196,11 @@ def draw_masked_object(
     cut_having_black = (grid_of_cuts < black_pixel_threshold) * 1
     cut_having_black = np.sum(np.sum(cut_having_black, axis=-1), axis=-1)
     cut_black_indices = np.array(np.where(cut_having_black > 0)).T
+    print(f"No of indices: {len(cut_black_indices)}")
+    step_div = len(cut_black_indices) / 40
+    progress_step_no = 100 / step_div
+    print(f"Step interval: {progress_step_no}")
+    sk_progress = 0
 
     counter = 0
     while len(cut_black_indices) > 1:
@@ -242,7 +248,10 @@ def draw_masked_object(
             variables.video_object.write(drawn_frame_with_hand)
 
         if counter % 40 == 0:
-            print("len of black indices: ", len(cut_black_indices))
+            #print("len of black indices: ", len(cut_black_indices))
+            sk_progress += progress_step_no
+            if progress_updater:
+                Clock.schedule_once(lambda dt: progress_updater(sk_progress))
 
     if object_mask is not None:
         variables.drawn_frame[:, :, :][object_ind] = variables.img[object_ind]
@@ -465,7 +474,8 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
 
 def initiate_sketch(
         image_path, split_len, frame_rate, object_skip_rate, bg_object_skip_rate, main_img_duration, callback, save_path=save_path,
-        which_platform="linux", end_color=True ):
+        which_platform="linux", end_color=True,
+        progress_callback=None ):
     global platform
     platform = which_platform
     final_result = {"status": False, "message": "Initial load"}
@@ -507,6 +517,8 @@ def initiate_sketch(
         )
 
         # invoking the drawing function
+        global progress_updater
+        progress_updater = progress_callback
         try:
             draw_whiteboard_animations(
                 image_bgr, mask_path, hand_path, hand_mask_path, save_video_path, variables,
@@ -534,7 +546,7 @@ def initiate_sketch(
 
 def get_split_lens(image_path):
     """ Get image width & height. If the resolution is not standard & split length is not a common divisor, get the nearest standard resolution """
-    final_return = {"image_res": "None", "split_lens": []}
+    final_return = {"image_res": [], "split_lens": []}
     hcf_list = []
     try:
         image_bgr = cv2.imread(image_path)
@@ -545,9 +557,9 @@ def get_split_lens(image_path):
         new_aspect_wd = int(img_ht * aspect_ratio)
         img_wd = find_nearest_res(new_aspect_wd)
         hcf_list = common_divisors(img_ht, img_wd)
-        filename = os.path.basename(image_path)
+        # update the results
         final_return["split_lens"] = hcf_list
-        final_return["image_res"] = f"{filename}, video resolution: {img_wd} x {img_ht}"
+        final_return["image_res"] = [img_wd, img_ht]
     except Exception as e:
         print(f"Error while getting split len: {e}")
     return final_return # list of split length

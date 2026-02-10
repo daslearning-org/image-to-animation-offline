@@ -5,6 +5,10 @@
 
 ## Change Details
 
+### 0.3.1
+- Setting a dafault `speed` (split let) based on image resolution.
+- Adding progress bar during the sketch job.
+
 ### 0.3.0
 
 #### All versions
