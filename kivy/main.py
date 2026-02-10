@@ -18,6 +18,7 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.progressbar import MDProgressBar
 
 from kivy.uix.videoplayer import VideoPlayer
+from kivy.uix.widget import Widget
 from kivy.lang import Builder
 from kivy.core.window import Window
 from kivy.metrics import dp, sp
@@ -35,7 +36,7 @@ from screens.divider import MyMDDivider
 from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
     # Running as a PyInstaller bundle
@@ -119,6 +120,7 @@ class DlImg2SktchApp(MDApp):
         # paths setup
         if platform == "android":
             file_m_height = 0.9 # to be implemented with ndk#28
+            self.speed_map = {640:20, 360:10, 480:10, 1280:20, 720:20, 1920:20, 1080:20, 2560:40, 1440:20, 3840:40, 2160:40, 7680:40, 4320:40}
             from android.permissions import request_permissions, Permission
             sdk_version = 28
             try:
@@ -145,7 +147,8 @@ class DlImg2SktchApp(MDApp):
             except Exception:
                 self.external_storage = os.path.abspath("/storage/emulated/0/")
         else:
-            self.internal_storage = os.path.abspath("/")
+            self.speed_map = {640:10, 360:10, 480:10, 1280:20, 720:20, 1920:20, 1080:20, 2560:40, 1440:20, 3840:40, 2160:40, 7680:40, 4320:40}
+            self.internal_storage = os.path.expanduser("~")
             self.external_storage = os.path.abspath("/")
             self.video_dir = os.path.join(self.user_data_dir, 'generated')
 
@@ -275,7 +278,7 @@ class DlImg2SktchApp(MDApp):
             self.show_toast_msg(f"Error: {e}", is_error=True)
 
     def open_img_fldr_manager(self):
-        """Open the file manager to select an image file. On android use Downloads or Pictures folders only"""
+        """Open the file manager to select an image folder. It is for desktop platforms only (non-android)"""
         try:
             self.img_fold_manager.show(self.external_storage)  # external storage
             self.is_img_folder_open = True
@@ -319,9 +322,22 @@ class DlImg2SktchApp(MDApp):
         self.image_path = path
         self.image_folder = ""
         self.batch_process = False
+        filename = os.path.basename(self.image_path)
         api_resp = get_split_lens(path)
         split_lens = api_resp["split_lens"]
         image_details = api_resp["image_res"]
+        if len(image_details) >= 2:
+            img_wd = image_details[0]
+            img_ht = image_details[1]
+            if img_wd > img_ht:
+                self.split_len = int(self.speed_map[img_wd])
+            else:
+                self.split_len = int(self.speed_map[img_ht])
+        else:
+            img_wd = "None"
+            img_ht = "None"
+            self.split_len = 1
+        image_details = f"{filename}, video resolution: {img_wd} x {img_ht}"
         img_box = self.root.ids.img_selector_lbl
         img_box.text = f"{image_details}"
         menu_items = [
@@ -336,13 +352,6 @@ class DlImg2SktchApp(MDApp):
             caller=self.split_len_drp,
             items=menu_items,
         )
-        if len(split_lens) >= 1:
-            if 10 in split_lens:
-                self.split_len = 10
-            else:
-                self.split_len = split_lens[0]
-        else:
-            self.split_len = 1
         self.split_len_drp.text = str(self.split_len)
         print(f"Initial split len: {self.split_len}")
         self.show_toast_msg(f"Selected image: {path}")
@@ -468,6 +477,11 @@ class DlImg2SktchApp(MDApp):
                 )
                 player_box.add_widget(self.batch_progress)
                 player_box.add_widget(BatchStopBtn())
+                player_box.add_widget(
+                    Widget(
+                        size_hint_y = 1
+                    )
+                )
                 self.batch_queue.put("start")
                 frame_rate = self.root.ids.frame_rate.text if self.root.ids.frame_rate.text != "" else self.frame_rate
                 obj_skip_rate = self.root.ids.obj_skip_rate.text if self.root.ids.obj_skip_rate.text != "" else self.obj_skip_rate
@@ -490,11 +504,39 @@ class DlImg2SktchApp(MDApp):
             obj_skip_rate = self.root.ids.obj_skip_rate.text if self.root.ids.obj_skip_rate.text != "" else self.obj_skip_rate
             bck_skip_rate = self.root.ids.bck_skip_rate.text if self.root.ids.bck_skip_rate.text != "" else self.bck_skip_rate
             main_img_duration = self.root.ids.main_img_duration.text if self.root.ids.main_img_duration.text != "" else self.main_img_duration
-            sketch_thread = Thread(target=initiate_sketch, args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform, self.end_color), daemon=True)
+            sketch_thread = Thread(
+                target=initiate_sketch, 
+                #args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform, self.end_color), 
+                kwargs={
+                    "image_path": self.image_path, 
+                    "split_len": split_len, 
+                    "frame_rate": int(frame_rate), 
+                    "object_skip_rate": int(obj_skip_rate), 
+                    "bg_object_skip_rate": int(bck_skip_rate), 
+                    "main_img_duration": int(main_img_duration), 
+                    "callback": self.task_complete_callback, 
+                    "save_path": self.video_dir, 
+                    "which_platform": platform, 
+                    "end_color": self.end_color,
+                    "progress_callback": self.sketch_prog_updater,
+                },
+                daemon=True
+            )
             sketch_thread.start()
             self.is_cv2_running = True
             player_box.clear_widgets()
             player_box.add_widget(TempSpinWait(txt = "Please wait while generating the sketch..."))
+            self.sketch_progress = MDProgressBar(
+                value = 0,
+                pos_hint = {"center_x": .5, "center_y": .5},
+                size_hint_y = 0.2
+            )
+            player_box.add_widget(self.sketch_progress)
+            player_box.add_widget(
+                Widget(
+                    size_hint_y = 1
+                )
+            )
 
     def batch_loop(self, img_file_list, frame_rate, obj_skip_rate, bck_skip_rate, main_img_duration):
         split_len = self.split_len
@@ -588,6 +630,9 @@ class DlImg2SktchApp(MDApp):
             player_box.add_widget(down_btn)
         else:
             self.show_toast_msg("No video files were generated in the batch!", is_error=True)
+
+    def sketch_prog_updater(self, progress_val):
+        self.sketch_progress.value = progress_val
 
     def batch_prog_updater(self, progress_val):
         self.batch_progress.value = progress_val
