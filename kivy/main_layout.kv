@@ -3,6 +3,7 @@
 #:import MDLabel kivymd.uix.label.MDLabel
 #:import MDTextField kivymd.uix.textfield.MDTextField
 #:import MDFillRoundFlatIconButton kivymd.uix.button.MDFillRoundFlatIconButton
+#:import MDIconButton kivymd.uix.button.MDIconButton
 
 #:import dp kivy.metrics.dp
 #:import sp kivy.metrics.sp
@@ -67,6 +68,22 @@
     #size_hint_x: 0.3
     #size_hint_y: 0.9
     on_release: app.open_img_fldr_manager()
+
+<PreferencesPop>: # MDScrollView
+    id: pop_preference
+    size_hint: (1, None)
+    height: dp(200)
+    MDList:
+        OneLineIconListItem:
+            text: "End Colour"
+            on_release: app.preference_toggle(self, "end_colour")
+            IconLeftWidget:
+                icon: "toggle-switch"
+        OneLineIconListItem:
+            text: "Hand on Video"
+            on_release: app.preference_toggle(self, "draw_hand")
+            IconLeftWidget:
+                icon: "toggle-switch"
 
 # The kivymd main screen
 MDScreen:
@@ -230,14 +247,14 @@ MDScreen:
             spacing: dp(4)
             padding: 14, 0, 14, 0 # left, top, right, bottom
 
-            MDFillRoundFlatIconButton:
+            MDIconButton:
                 id: btn_end_img
-                text: "End Colour"
-                text_color: 'black'
-                icon: "toggle-switch"
-                icon_color: "magenta"
-                font_size: sp(18)
-                md_bg_color: 'pink'
+                #text: ""
+                #text_color: 'black'
+                icon: "tune-variant" #toggle-switch
+                icon_color: "blue"
+                font_size: sp(14)
+                #md_bg_color: 'gray'
                 pos_hint: {"center_x": .5, "center_y": .5}
                 size_hint_x: 0.2
                 on_release: app.set_end_img_color()

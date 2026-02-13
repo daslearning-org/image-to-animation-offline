@@ -61,6 +61,9 @@ class BatchImgFolderBtn(MDFillRoundFlatIconButton):
 class BatchStopBtn(MDBoxLayout):
     pass
 
+class PreferencesPop(MDDialog):
+    pass
+
 # app class
 class DlImg2SktchApp(MDApp):
     split_len = NumericProperty(10)
