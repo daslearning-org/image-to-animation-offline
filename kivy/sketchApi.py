@@ -219,19 +219,22 @@ def draw_masked_object(
             temp_drawing
         )
 
-        hand_coord_x = range_h_start + int(variables.split_len / 2)
-        hand_coord_y = range_v_start + int(variables.split_len / 2)
-        drawn_frame_with_hand = draw_hand_on_img(
-            variables.drawn_frame.copy(),
-            variables.hand.copy(),
-            hand_coord_x,
-            hand_coord_y,
-            variables.hand_mask_inv.copy(),
-            variables.hand_ht,
-            variables.hand_wd,
-            variables.resize_ht,
-            variables.resize_wd,
-        )
+        if variables.draw_hand:
+            hand_coord_x = range_h_start + int(variables.split_len / 2)
+            hand_coord_y = range_v_start + int(variables.split_len / 2)
+            drawn_frame_with_hand = draw_hand_on_img(
+                variables.drawn_frame.copy(),
+                variables.hand.copy(),
+                hand_coord_x,
+                hand_coord_y,
+                variables.hand_mask_inv.copy(),
+                variables.hand_ht,
+                variables.hand_wd,
+                variables.resize_ht,
+                variables.resize_wd,
+            )
+        else:
+            drawn_frame_with_hand = variables.drawn_frame.copy()
 
         # delete the selected ind from the d_array
         cut_black_indices[selected_ind] = cut_black_indices[-1]
@@ -391,6 +394,7 @@ class AllVariables:
         object_skip_rate=None,
         bg_object_skip_rate=None,
         end_gray_img_duration_in_sec=None,
+        draw_hand=True,
     ):
         self.frame_rate = frame_rate
         self.resize_wd = resize_wd
@@ -399,6 +403,7 @@ class AllVariables:
         self.object_skip_rate = object_skip_rate
         self.bg_object_skip_rate = bg_object_skip_rate
         self.end_gray_img_duration_in_sec = end_gray_img_duration_in_sec
+        self.draw_hand = draw_hand
 
 def common_divisors(num1, num2):
     """
@@ -474,7 +479,7 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
 
 def initiate_sketch(
         image_path, split_len, frame_rate, object_skip_rate, bg_object_skip_rate, main_img_duration, callback, save_path=save_path,
-        which_platform="linux", end_color=True,
+        which_platform="linux", end_color=True, draw_hand=True,
         progress_callback=None ):
     global platform
     platform = which_platform
@@ -514,6 +519,7 @@ def initiate_sketch(
             # increase this number to make the video runtime smaller (draws faster)
             bg_object_skip_rate = bg_object_skip_rate,  # assuming background region is larger, hence increasing the skip rate
             end_gray_img_duration_in_sec = main_img_duration,  # the last few secs of the video, for every image will have the entire original image shown as is
+            draw_hand=draw_hand,
         )
 
         # invoking the drawing function

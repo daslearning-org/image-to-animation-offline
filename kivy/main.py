@@ -28,6 +28,8 @@ from kivy.properties import StringProperty, NumericProperty, ObjectProperty
 if platform == "android":
     from jnius import autoclass, PythonJavaClass, java_method
 
+from plyer import filechooser
+
 # IMPORTANT: Set this property for keyboard behavior
 Window.softinput_mode = "below_target"
 
@@ -36,7 +38,7 @@ from screens.divider import MyMDDivider
 from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
     # Running as a PyInstaller bundle
@@ -75,6 +77,7 @@ class DlImg2SktchApp(MDApp):
     image_folder = StringProperty("")
     vid_download_path = StringProperty("")
     is_cv2_running = ObjectProperty()
+    last_upload_path = ObjectProperty(None)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -167,14 +170,14 @@ class DlImg2SktchApp(MDApp):
 
         # file managers
         self.is_img_manager_open = False
-        self.img_file_manager = MDFileManager(
-            exit_manager=self.img_file_exit_manager,
-            select_path=self.select_img_path,
-            ext=[".png", ".jpg", ".jpeg", ".webp"],  # Restrict to image files
-            selector="file",  # Restrict to selecting files only
-            preview=True,
-            #show_hidden_files=True,
-        )
+        #self.img_file_manager = MDFileManager(
+        #    exit_manager=self.img_file_exit_manager,
+        #    select_path=self.select_img_path,
+        #    ext=[".png", ".jpg", ".jpeg", ".webp"],  # Restrict to image files
+        #    selector="file",  # Restrict to selecting files only
+        #    preview=True,
+        #    #show_hidden_files=True,
+        #)
         self.is_vid_manager_open = False
         self.vid_file_manager = MDFileManager(
             exit_manager=self.vid_file_exit_manager,
@@ -272,10 +275,28 @@ class DlImg2SktchApp(MDApp):
     def open_img_file_manager(self):
         """Open the file manager to select an image file. On android use Downloads or Pictures folders only"""
         try:
-            self.img_file_manager.show(self.external_storage)  # external storage
+            #self.img_file_manager.show(self.external_storage)  # external storage
+            if not self.last_upload_path:
+                self.last_upload_path = self.external_storage
+            filechooser.open_file(
+                on_selection = self.handle_img_selection,
+                path = self.last_upload_path,
+                multiple = False,
+                filters = ["*.jpg","*.png", "*.jpeg", "*.webp", "*"],
+                #preview = self.img_preview,
+            )
             self.is_img_manager_open = True
         except Exception as e:
             self.show_toast_msg(f"Error: {e}", is_error=True)
+
+    def handle_img_selection(self, selection=None):
+        '''
+        Callback function for handling the image selection.
+        '''
+        self.is_img_manager_open = False
+        if selection:
+            image_path = str(selection[0])
+            Clock.schedule_once(lambda dt: self.select_img_path(image_path))
 
     def open_img_fldr_manager(self):
         """Open the file manager to select an image folder. It is for desktop platforms only (non-android)"""
@@ -319,10 +340,15 @@ class DlImg2SktchApp(MDApp):
         print(f"Initial split len: {self.split_len}")
 
     def select_img_path(self, path: str):
+        if not (path.endswith(".jpg") or path.endswith(".jpeg") or path.endswith(".png") or path.endswith(".webp")):
+            self.show_toast_msg(f"Selected file: `{path}` is not an image", is_error=True)
+            self.image_path = ""
+            return
         self.image_path = path
         self.image_folder = ""
         self.batch_process = False
         filename = os.path.basename(self.image_path)
+        self.last_upload_path = os.path.dirname(path)
         api_resp = get_split_lens(path)
         split_lens = api_resp["split_lens"]
         image_details = api_resp["image_res"]
@@ -355,7 +381,7 @@ class DlImg2SktchApp(MDApp):
         self.split_len_drp.text = str(self.split_len)
         print(f"Initial split len: {self.split_len}")
         self.show_toast_msg(f"Selected image: {path}")
-        self.img_file_exit_manager()
+        #self.img_file_exit_manager()
 
     def select_vid_path(self, path: str):
         """
@@ -380,7 +406,7 @@ class DlImg2SktchApp(MDApp):
     def img_file_exit_manager(self, *args):
         """Called when the user reaches the root of the directory tree."""
         self.is_img_manager_open = False
-        self.img_file_manager.close()
+        #self.img_file_manager.close()
 
     def vid_file_exit_manager(self, *args):
         """Called when the user reaches the root of the directory tree."""
@@ -545,7 +571,24 @@ class DlImg2SktchApp(MDApp):
         q_message = "start"
         for file in img_file_list:
             full_img_path = os.path.join(self.image_folder, file)
-            sketch_thread = Thread(target=initiate_sketch, args=(full_img_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform, self.end_color), daemon=True)
+            sketch_thread = Thread(
+                target=initiate_sketch, 
+                #args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform, self.end_color), 
+                kwargs={
+                    "image_path": full_img_path, 
+                    "split_len": split_len, 
+                    "frame_rate": int(frame_rate), 
+                    "object_skip_rate": int(obj_skip_rate), 
+                    "bg_object_skip_rate": int(bck_skip_rate), 
+                    "main_img_duration": int(main_img_duration), 
+                    "callback": self.task_complete_callback, 
+                    "save_path": self.video_dir, 
+                    "which_platform": platform, 
+                    "end_color": self.end_color,
+                    #"progress_callback": self.sketch_prog_updater,
+                },
+                daemon=True
+            )
             sketch_thread.start()
 
             self.is_cv2_running = True
@@ -712,23 +755,23 @@ class DlImg2SktchApp(MDApp):
 
     def events(self, instance, keyboard, keycode, text, modifiers):
         """Handle mobile device button presses (e.g., Android back button)."""
-        if keyboard in (1001, 27):  # Android back button or equivalent
-            if self.is_img_manager_open:
-                # Check if we are at the root of the directory tree
-                if self.img_file_manager.current_path == self.external_storage:
-                    self.show_toast_msg(f"Closing file manager from main storage")
-                    self.img_file_exit_manager()
-                else:
-                    self.img_file_manager.back()  # Navigate back within file manager
-                return True  # Consume the event to prevent app exit
-            if self.is_vid_manager_open:
-                # Check if we are at the root of the directory tree
-                if self.vid_file_manager.current_path == self.external_storage:
-                    self.show_toast_msg(f"Closing file manager from main storage")
-                    self.vid_file_exit_manager()
-                else:
-                    self.vid_file_manager.back()  # Navigate back within file manager
-                return True  # Consume the event to prevent app exit
+        #if keyboard in (1001, 27):  # Android back button or equivalent
+        #    if self.is_img_manager_open:
+        #        # Check if we are at the root of the directory tree
+        #        if self.img_file_manager.current_path == self.external_storage:
+        #            self.show_toast_msg(f"Closing file manager from main storage")
+        #            self.img_file_exit_manager()
+        #        else:
+        #            self.img_file_manager.back()  # Navigate back within file manager
+        #        return True  # Consume the event to prevent app exit
+        #    if self.is_vid_manager_open:
+        #        # Check if we are at the root of the directory tree
+        #        if self.vid_file_manager.current_path == self.external_storage:
+        #            self.show_toast_msg(f"Closing file manager from main storage")
+        #            self.vid_file_exit_manager()
+        #        else:
+        #            self.vid_file_manager.back()  # Navigate back within file manager
+        #        return True  # Consume the event to prevent app exit
         return False
 
     def txt_dialog_closer(self, instance):
