@@ -9,12 +9,14 @@ import queue
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDFlatButton, MDFloatingActionButton, MDFillRoundFlatIconButton
+from kivymd.uix.button import MDFlatButton, MDFloatingActionButton, MDFillRoundFlatIconButton, MDIconButton
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.spinner import MDSpinner
 from kivymd.uix.filemanager import MDFileManager
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.scrollview import MDScrollView
+from kivymd.uix.list import MDList, OneLineIconListItem, IconLeftWidget, IconRightWidget
 from kivymd.uix.progressbar import MDProgressBar
 
 from kivy.uix.videoplayer import VideoPlayer
@@ -24,9 +26,12 @@ from kivy.core.window import Window
 from kivy.metrics import dp, sp
 from kivy.utils import platform
 from kivy.clock import Clock
-from kivy.properties import StringProperty, NumericProperty, ObjectProperty
+from kivy.properties import StringProperty, NumericProperty, ObjectProperty #, BooleanProperty
 if platform == "android":
     from jnius import autoclass, PythonJavaClass, java_method
+
+# plyer for croos platform capabilties
+from plyer import filechooser
 
 # IMPORTANT: Set this property for keyboard behavior
 Window.softinput_mode = "below_target"
@@ -36,7 +41,7 @@ from screens.divider import MyMDDivider
 from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
     # Running as a PyInstaller bundle
@@ -59,6 +64,12 @@ class BatchImgFolderBtn(MDFillRoundFlatIconButton):
 class BatchStopBtn(MDBoxLayout):
     pass
 
+class PreferencesPop(MDScrollView):
+    end_colour_icon = StringProperty("toggle-switch")
+    end_colour_icon_colour = StringProperty("green")
+    draw_hand_icon = StringProperty("toggle-switch")
+    draw_hand_icon_colour = StringProperty("green")
+
 # app class
 class DlImg2SktchApp(MDApp):
     split_len = NumericProperty(10)
@@ -75,6 +86,7 @@ class DlImg2SktchApp(MDApp):
     image_folder = StringProperty("")
     vid_download_path = StringProperty("")
     is_cv2_running = ObjectProperty()
+    last_upload_path = ObjectProperty(None)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -85,6 +97,8 @@ class DlImg2SktchApp(MDApp):
         self.theme_cls.accent_palette = "Orange"
         self.batch_process = False
         self.end_color = True
+        self.draw_hand = True
+        self.pref_dialog = None
         self.img_file_count = 0
         self.top_menu_items = {
             "Delete old sketches": {
@@ -167,14 +181,7 @@ class DlImg2SktchApp(MDApp):
 
         # file managers
         self.is_img_manager_open = False
-        self.img_file_manager = MDFileManager(
-            exit_manager=self.img_file_exit_manager,
-            select_path=self.select_img_path,
-            ext=[".png", ".jpg", ".jpeg", ".webp"],  # Restrict to image files
-            selector="file",  # Restrict to selecting files only
-            preview=True,
-            #show_hidden_files=True,
-        )
+
         self.is_vid_manager_open = False
         self.vid_file_manager = MDFileManager(
             exit_manager=self.vid_file_exit_manager,
@@ -203,6 +210,7 @@ class DlImg2SktchApp(MDApp):
             items=menu_items,
             width_mult=4,
         )
+        self.pref_scroll = PreferencesPop()
 
     def menu_bar_callback(self, button):
         self.menu.caller = button
@@ -242,7 +250,7 @@ class DlImg2SktchApp(MDApp):
         elif action == "clear":
             self.all_delete_alert()
 
-    def show_toast_msg(self, message, is_error=False):
+    def show_toast_msg(self, message, is_error=False, duration=3):
         from kivymd.uix.snackbar import MDSnackbar
         bg_color = (0.2, 0.6, 0.2, 1) if not is_error else (0.8, 0.2, 0.2, 1)
         MDSnackbar(
@@ -253,7 +261,7 @@ class DlImg2SktchApp(MDApp):
             md_bg_color=bg_color,
             y=dp(24),
             pos_hint={"center_x": 0.5},
-            duration=3
+            duration=duration
         ).open()
 
     def show_text_dialog(self, title, text="", buttons=[]):
@@ -272,10 +280,26 @@ class DlImg2SktchApp(MDApp):
     def open_img_file_manager(self):
         """Open the file manager to select an image file. On android use Downloads or Pictures folders only"""
         try:
-            self.img_file_manager.show(self.external_storage)  # external storage
+            if not self.last_upload_path:
+                self.last_upload_path = self.external_storage
+            filechooser.open_file(
+                on_selection = self.handle_img_selection,
+                path = self.last_upload_path,
+                multiple = False,
+                filters = [["*.jpg","*.png", "*.jpeg", "*.webp"], "*"],
+            )
             self.is_img_manager_open = True
         except Exception as e:
             self.show_toast_msg(f"Error: {e}", is_error=True)
+
+    def handle_img_selection(self, selection=None):
+        '''
+        Callback function for handling the image selection.
+        '''
+        self.is_img_manager_open = False
+        if selection:
+            image_path = str(selection[0])
+            Clock.schedule_once(lambda dt: self.select_img_path(image_path))
 
     def open_img_fldr_manager(self):
         """Open the file manager to select an image folder. It is for desktop platforms only (non-android)"""
@@ -319,10 +343,15 @@ class DlImg2SktchApp(MDApp):
         print(f"Initial split len: {self.split_len}")
 
     def select_img_path(self, path: str):
+        if not (path.endswith(".jpg") or path.endswith(".jpeg") or path.endswith(".png") or path.endswith(".webp")):
+            self.show_toast_msg(f"Selected file: `{path}` is not an image", is_error=True)
+            self.image_path = ""
+            return
         self.image_path = path
         self.image_folder = ""
         self.batch_process = False
         filename = os.path.basename(self.image_path)
+        self.last_upload_path = os.path.dirname(path)
         api_resp = get_split_lens(path)
         split_lens = api_resp["split_lens"]
         image_details = api_resp["image_res"]
@@ -355,7 +384,6 @@ class DlImg2SktchApp(MDApp):
         self.split_len_drp.text = str(self.split_len)
         print(f"Initial split len: {self.split_len}")
         self.show_toast_msg(f"Selected image: {path}")
-        self.img_file_exit_manager()
 
     def select_vid_path(self, path: str):
         """
@@ -376,11 +404,6 @@ class DlImg2SktchApp(MDApp):
         except Exception as e:
             print(f"Error saving file: {e}")
             self.show_toast_msg(f"Error saving file: {e}", is_error=True)
-
-    def img_file_exit_manager(self, *args):
-        """Called when the user reaches the root of the directory tree."""
-        self.is_img_manager_open = False
-        self.img_file_manager.close()
 
     def vid_file_exit_manager(self, *args):
         """Called when the user reaches the root of the directory tree."""
@@ -430,20 +453,40 @@ class DlImg2SktchApp(MDApp):
                 print(f"Error saving file: {e}")
                 self.show_toast_msg(f"Error deleting file: {e}", is_error=True)
 
-    def set_end_img_color(self):
-        btn_end_img = self.root.ids.btn_end_img
-        if self.end_color:
-            btn_end_img.icon = "toggle-switch-off"
-            btn_end_img.icon_color = "white"
-            btn_end_img.text_color = "white"
-            btn_end_img.md_bg_color = "gray"
-            self.end_color = False
-        else:
-            btn_end_img.icon = "toggle-switch"
-            btn_end_img.icon_color = "magenta"
-            btn_end_img.text_color = "black"
-            btn_end_img.md_bg_color = "pink"
-            self.end_color = True
+    def preference_toggle(self, instance, choice):
+        if choice == "end_colour":
+            if self.end_color:
+                self.pref_scroll.end_colour_icon = "toggle-switch-off"
+                self.pref_scroll.end_colour_icon_colour = "gray"
+                self.end_color = False
+            else:
+                self.pref_scroll.end_colour_icon = "toggle-switch"
+                self.pref_scroll.end_colour_icon_colour = "green"
+                self.end_color = True
+        elif choice == "draw_hand":
+            if self.draw_hand:
+                self.pref_scroll.draw_hand_icon = "toggle-switch-off"
+                self.pref_scroll.draw_hand_icon_colour = "gray"
+                self.draw_hand = False
+            else:
+                self.pref_scroll.draw_hand_icon = "toggle-switch"
+                self.pref_scroll.draw_hand_icon_colour = "green"
+                self.draw_hand = True
+
+    def popup_preference(self):
+        if not self.pref_dialog:
+            self.pref_dialog = MDDialog(
+                title="Preferences",
+                type="custom",
+                content_cls=self.pref_scroll,
+                buttons=[
+                    MDFlatButton(
+                        text="OK",
+                        on_release=lambda x: self.pref_dialog.dismiss()
+                    )
+                ],
+            )
+        self.pref_dialog.open()
 
     def submit_sketch_req(self):
         player_box = self.root.ids.player_box
@@ -518,6 +561,7 @@ class DlImg2SktchApp(MDApp):
                     "save_path": self.video_dir, 
                     "which_platform": platform, 
                     "end_color": self.end_color,
+                    "draw_hand": self.draw_hand,
                     "progress_callback": self.sketch_prog_updater,
                 },
                 daemon=True
@@ -545,7 +589,25 @@ class DlImg2SktchApp(MDApp):
         q_message = "start"
         for file in img_file_list:
             full_img_path = os.path.join(self.image_folder, file)
-            sketch_thread = Thread(target=initiate_sketch, args=(full_img_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform, self.end_color), daemon=True)
+            sketch_thread = Thread(
+                target=initiate_sketch, 
+                #args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform, self.end_color), 
+                kwargs={
+                    "image_path": full_img_path, 
+                    "split_len": split_len, 
+                    "frame_rate": int(frame_rate), 
+                    "object_skip_rate": int(obj_skip_rate), 
+                    "bg_object_skip_rate": int(bck_skip_rate), 
+                    "main_img_duration": int(main_img_duration), 
+                    "callback": self.task_complete_callback, 
+                    "save_path": self.video_dir, 
+                    "which_platform": platform, 
+                    "end_color": self.end_color,
+                    "draw_hand": self.draw_hand,
+                    #"progress_callback": self.sketch_prog_updater,
+                },
+                daemon=True
+            )
             sketch_thread.start()
 
             self.is_cv2_running = True
@@ -664,12 +726,6 @@ class DlImg2SktchApp(MDApp):
         main_img_duration.text = "2"
         player_box = self.root.ids.player_box
         player_box.clear_widgets()
-        btn_end_img = self.root.ids.btn_end_img
-        btn_end_img.icon = "toggle-switch"
-        btn_end_img.icon_color = "magenta"
-        btn_end_img.text_color = "black"
-        btn_end_img.md_bg_color = "pink"
-        self.end_color = True
 
     def all_delete_alert(self):
         del_vid_count = 0
@@ -712,23 +768,23 @@ class DlImg2SktchApp(MDApp):
 
     def events(self, instance, keyboard, keycode, text, modifiers):
         """Handle mobile device button presses (e.g., Android back button)."""
-        if keyboard in (1001, 27):  # Android back button or equivalent
-            if self.is_img_manager_open:
-                # Check if we are at the root of the directory tree
-                if self.img_file_manager.current_path == self.external_storage:
-                    self.show_toast_msg(f"Closing file manager from main storage")
-                    self.img_file_exit_manager()
-                else:
-                    self.img_file_manager.back()  # Navigate back within file manager
-                return True  # Consume the event to prevent app exit
-            if self.is_vid_manager_open:
-                # Check if we are at the root of the directory tree
-                if self.vid_file_manager.current_path == self.external_storage:
-                    self.show_toast_msg(f"Closing file manager from main storage")
-                    self.vid_file_exit_manager()
-                else:
-                    self.vid_file_manager.back()  # Navigate back within file manager
-                return True  # Consume the event to prevent app exit
+        #if keyboard in (1001, 27):  # Android back button or equivalent
+        #    if self.is_img_manager_open:
+        #        # Check if we are at the root of the directory tree
+        #        if self.img_file_manager.current_path == self.external_storage:
+        #            self.show_toast_msg(f"Closing file manager from main storage")
+        #            self.img_file_exit_manager()
+        #        else:
+        #            self.img_file_manager.back()  # Navigate back within file manager
+        #        return True  # Consume the event to prevent app exit
+        #    if self.is_vid_manager_open:
+        #        # Check if we are at the root of the directory tree
+        #        if self.vid_file_manager.current_path == self.external_storage:
+        #            self.show_toast_msg(f"Closing file manager from main storage")
+        #            self.vid_file_exit_manager()
+        #        else:
+        #            self.vid_file_manager.back()  # Navigate back within file manager
+        #        return True  # Consume the event to prevent app exit
         return False
 
     def txt_dialog_closer(self, instance):

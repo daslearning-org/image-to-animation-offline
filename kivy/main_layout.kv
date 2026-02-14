@@ -3,6 +3,7 @@
 #:import MDLabel kivymd.uix.label.MDLabel
 #:import MDTextField kivymd.uix.textfield.MDTextField
 #:import MDFillRoundFlatIconButton kivymd.uix.button.MDFillRoundFlatIconButton
+#:import MDIconButton kivymd.uix.button.MDIconButton
 
 #:import dp kivy.metrics.dp
 #:import sp kivy.metrics.sp
@@ -68,7 +69,33 @@
     #size_hint_y: 0.9
     on_release: app.open_img_fldr_manager()
 
-# The kivymd main screen
+<PreferencesPop>: # MDScrollView
+    id: pop_preference
+    size_hint: (1, None)
+    height: dp(300)
+    MDList:
+        adaptive_height: True
+        OneLineIconListItem:
+            text: "End Colour"
+            on_release: app.preference_toggle(end_colour_icon, "end_colour")
+            IconLeftWidget:
+                id: end_colour_icon
+                icon: root.end_colour_icon
+                theme_text_color: "Custom"
+                text_color: root.end_colour_icon_colour
+                on_release: app.preference_toggle(self, "end_colour")
+        OneLineIconListItem:
+            text: "Hand on Video"
+            on_release: app.preference_toggle(draw_hand_icon, "draw_hand")
+            IconLeftWidget:
+                id: draw_hand_icon
+                icon: root.draw_hand_icon
+                theme_text_color: "Custom"
+                text_color: root.draw_hand_icon_colour
+                on_release: app.preference_toggle(self, "draw_hand")
+
+
+### The kivymd main screen ###
 MDScreen:
 
     MDBoxLayout: # main container
@@ -230,17 +257,18 @@ MDScreen:
             spacing: dp(4)
             padding: 14, 0, 14, 0 # left, top, right, bottom
 
-            MDFillRoundFlatIconButton:
+            MDIconButton:
                 id: btn_end_img
-                text: "End Colour"
-                text_color: 'black'
-                icon: "toggle-switch"
-                icon_color: "magenta"
-                font_size: sp(18)
-                md_bg_color: 'pink'
+                #text: ""
+                #text_color: 'black'
+                icon: "tune-variant" #toggle-switch
+                theme_icon_color: "Custom"
+                icon_color: "blue"
+                icon_size: sp(18)
+                md_bg_color: 'gray'
                 pos_hint: {"center_x": .5, "center_y": .5}
                 size_hint_x: 0.2
-                on_release: app.set_end_img_color()
+                on_release: app.popup_preference()
 
             MDFillRoundFlatIconButton:
                 id: btn_submit
@@ -249,7 +277,7 @@ MDScreen:
                 font_size: sp(18)
                 md_bg_color: 'orange'
                 pos_hint: {"center_x": .5, "center_y": .5}
-                size_hint_x: 0.6
+                size_hint_x: 0.5
                 on_release: app.submit_sketch_req()
 
             MDFillRoundFlatIconButton:
@@ -259,5 +287,5 @@ MDScreen:
                 font_size: sp(18)
                 md_bg_color: '#333036'
                 pos_hint: {"center_x": .5, "center_y": .5}
-                size_hint_x: 0.2
+                size_hint_x: 0.3
                 on_release: app.reset_all()
