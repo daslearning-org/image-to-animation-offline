@@ -80,18 +80,18 @@
             on_release: app.preference_toggle(end_colour_icon, "end_colour")
             IconLeftWidget:
                 id: end_colour_icon
-                icon: "toggle-switch"
+                icon: root.end_colour_icon
                 theme_text_color: "Custom"
-                text_color: "green"
+                text_color: root.end_colour_icon_colour
                 on_release: app.preference_toggle(self, "end_colour")
         OneLineIconListItem:
             text: "Hand on Video"
             on_release: app.preference_toggle(draw_hand_icon, "draw_hand")
             IconLeftWidget:
                 id: draw_hand_icon
-                icon: "toggle-switch"
+                icon: root.draw_hand_icon
                 theme_text_color: "Custom"
-                text_color: "green"
+                text_color: root.draw_hand_icon_colour
                 on_release: app.preference_toggle(self, "draw_hand")
 
 
