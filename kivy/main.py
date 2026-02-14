@@ -9,12 +9,14 @@ import queue
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDFlatButton, MDFloatingActionButton, MDFillRoundFlatIconButton
+from kivymd.uix.button import MDFlatButton, MDFloatingActionButton, MDFillRoundFlatIconButton, MDIconButton
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.spinner import MDSpinner
 from kivymd.uix.filemanager import MDFileManager
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.scrollview import MDScrollView
+from kivymd.uix.list import MDList, OneLineIconListItem, IconLeftWidget, IconRightWidget
 from kivymd.uix.progressbar import MDProgressBar
 
 from kivy.uix.videoplayer import VideoPlayer
@@ -28,6 +30,7 @@ from kivy.properties import StringProperty, NumericProperty, ObjectProperty
 if platform == "android":
     from jnius import autoclass, PythonJavaClass, java_method
 
+# plyer for croos platform capabilties
 from plyer import filechooser
 
 # IMPORTANT: Set this property for keyboard behavior
@@ -61,7 +64,7 @@ class BatchImgFolderBtn(MDFillRoundFlatIconButton):
 class BatchStopBtn(MDBoxLayout):
     pass
 
-class PreferencesPop(MDDialog):
+class PreferencesPop(MDScrollView):
     pass
 
 # app class
@@ -91,6 +94,7 @@ class DlImg2SktchApp(MDApp):
         self.theme_cls.accent_palette = "Orange"
         self.batch_process = False
         self.end_color = True
+        self.draw_hand = True
         self.img_file_count = 0
         self.top_menu_items = {
             "Delete old sketches": {
@@ -459,20 +463,42 @@ class DlImg2SktchApp(MDApp):
                 print(f"Error saving file: {e}")
                 self.show_toast_msg(f"Error deleting file: {e}", is_error=True)
 
-    def set_end_img_color(self):
-        btn_end_img = self.root.ids.btn_end_img
-        if self.end_color:
-            btn_end_img.icon = "toggle-switch-off"
-            btn_end_img.icon_color = "white"
-            btn_end_img.text_color = "white"
-            btn_end_img.md_bg_color = "gray"
-            self.end_color = False
-        else:
-            btn_end_img.icon = "toggle-switch"
-            btn_end_img.icon_color = "magenta"
-            btn_end_img.text_color = "black"
-            btn_end_img.md_bg_color = "pink"
-            self.end_color = True
+    def preference_toggle(self, instance, choice):
+        if choice == "end_colour":
+            end_colour_icon = instance
+            if self.end_color:
+                end_colour_icon.icon = "toggle-switch-off"
+                end_colour_icon.text_color = "gray"
+                self.end_color = False
+            else:
+                end_colour_icon.icon = "toggle-switch"
+                end_colour_icon.text_color = "green"
+                self.end_color = True
+        elif choice == "draw_hand":
+            draw_hand_icon = instance
+            if self.draw_hand:
+                draw_hand_icon.icon = "toggle-switch-off"
+                draw_hand_icon.text_color = "gray"
+                self.draw_hand = False
+            else:
+                draw_hand_icon.icon = "toggle-switch"
+                draw_hand_icon.text_color = "green"
+                self.draw_hand = True
+
+    def popup_preference(self):
+        scroll = PreferencesPop()
+        self.pref_dialog = MDDialog(
+            title="Preferences",
+            type="custom",
+            content_cls=scroll,
+            buttons=[
+                MDFlatButton(
+                    text="Cancel",
+                    on_release=lambda x: self.pref_dialog.dismiss()
+                )
+            ],
+        )
+        self.pref_dialog.open()
 
     def submit_sketch_req(self):
         player_box = self.root.ids.player_box
@@ -547,6 +573,7 @@ class DlImg2SktchApp(MDApp):
                     "save_path": self.video_dir, 
                     "which_platform": platform, 
                     "end_color": self.end_color,
+                    "draw_hand": self.draw_hand,
                     "progress_callback": self.sketch_prog_updater,
                 },
                 daemon=True
@@ -588,6 +615,7 @@ class DlImg2SktchApp(MDApp):
                     "save_path": self.video_dir, 
                     "which_platform": platform, 
                     "end_color": self.end_color,
+                    "draw_hand": self.draw_hand,
                     #"progress_callback": self.sketch_prog_updater,
                 },
                 daemon=True
