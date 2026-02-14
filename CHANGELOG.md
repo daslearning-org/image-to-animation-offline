@@ -7,6 +7,8 @@
 
 ### 0.4.0
 - Using [Kivy-Plyer](https://github.com/kivy/plyer/blob/master/plyer/facades/filechooser.py) to use native file manager. This will also remember the last selected path (if we have done any upload after launching the app, not applicable for Android).
+- Added `Preference` button (Icon) to control the on-off toggles.
+- Added a Toggle switch to show or not to show the drawing `Hand` on video (It is under the Preferences).
 
 ### 0.3.1
 - Setting a dafault `speed` (split let) based on image resolution.
