@@ -292,7 +292,7 @@ class DlImg2SktchApp(MDApp):
                 on_selection = self.handle_img_selection,
                 path = self.last_upload_path,
                 multiple = False,
-                filters = [["*.jpg","*.png", "*.jpeg", "*.webp"], "*"],
+                filters = [["*.JPG", "*.jpg","*.png", "*.jpeg", "*.webp"], "*"],
                 preview = True,
             )
             self.is_img_manager_open = True
