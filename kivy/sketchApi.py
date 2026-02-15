@@ -384,6 +384,38 @@ def find_nearest_res(given):
     idx = (np.abs(arr - given)).argmin()  # Find index of minimum difference
     return arr[idx]
 
+def resize_with_padding(img, target_width, target_height, color=(255,255,255)):
+    """
+    Resize image to target resolution keeping aspect ratio.
+    Remaining area is padded with given color (default white).
+    """
+
+    h, w = img.shape[:2]
+    # scale ratio (keep aspect ratio)
+    scale = min(target_width / w, target_height / h)
+    # new size
+    new_w = int(w * scale)
+    new_h = int(h * scale)
+    # resize image
+    resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    # compute padding
+    pad_w = target_width - new_w
+    pad_h = target_height - new_h
+    top = pad_h // 2
+    bottom = pad_h - top
+    left = pad_w // 2
+    right = pad_w - left
+
+    # add border (padding)
+    padded = cv2.copyMakeBorder(
+        resized,
+        top, bottom, left, right,
+        cv2.BORDER_CONSTANT,
+        value=color
+    )
+    return padded
+
+
 class AllVariables:
     def __init__(
         self,
@@ -479,7 +511,7 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
 
 def initiate_sketch(
         image_path, split_len, frame_rate, object_skip_rate, bg_object_skip_rate, main_img_duration, callback, save_path=save_path,
-        which_platform="linux", end_color=True, draw_hand=True,
+        which_platform="linux", end_color=True, draw_hand=True, max_1080p=True,
         progress_callback=None ):
     global platform
     platform = which_platform
@@ -503,10 +535,23 @@ def initiate_sketch(
 
         # Get image width & height. If the resolution is not standard & split length is not a common divisor, get the nearest standard res
         img_ht, img_wd = image_bgr.shape[0], image_bgr.shape[1]
-        aspect_ratio = img_wd / img_ht
-        img_ht = find_nearest_res(img_ht)
-        new_aspect_wd = int(img_ht * aspect_ratio)
-        img_wd = find_nearest_res(new_aspect_wd)
+        if max_1080p and (img_ht > 1920 or img_wd > 1920):
+            if img_wd > img_ht: # 16:9
+                img_wd = 1920
+                img_ht = 1080
+            else: # 9:16
+                img_ht = 1920
+                img_wd = 1080
+            image_bgr = resize_with_padding(
+                img=image_bgr,
+                target_width=img_wd,
+                target_height=img_ht
+            )
+        else:
+            aspect_ratio = img_wd / img_ht
+            img_ht = find_nearest_res(img_ht)
+            new_aspect_wd = int(img_ht * aspect_ratio)
+            img_wd = find_nearest_res(new_aspect_wd)
         print(f"Target width: {img_wd} x height: {img_ht}")
 
         # constants and variables object
@@ -550,7 +595,7 @@ def initiate_sketch(
         final_result = {"status": False, "message": f"Error: {e}"}
     Clock.schedule_once(lambda dt: callback(final_result))
 
-def get_split_lens(image_path):
+def get_split_lens(image_path, max_1080p=True):
     """ Get image width & height. If the resolution is not standard & split length is not a common divisor, get the nearest standard resolution """
     final_return = {"image_res": [], "split_lens": []}
     hcf_list = []
@@ -558,10 +603,18 @@ def get_split_lens(image_path):
         image_bgr = cv2.imread(image_path)
         #image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         img_ht, img_wd = image_bgr.shape[0], image_bgr.shape[1]
-        aspect_ratio = img_wd / img_ht
-        img_ht = find_nearest_res(img_ht)
-        new_aspect_wd = int(img_ht * aspect_ratio)
-        img_wd = find_nearest_res(new_aspect_wd)
+        if max_1080p and (img_ht > 1920 or img_wd > 1920):
+            if img_wd > img_ht: # 16:9
+                img_wd = 1920
+                img_ht = 1080
+            else: # 9:16
+                img_ht = 1920
+                img_wd = 1080
+        else:
+            aspect_ratio = img_wd / img_ht
+            img_ht = find_nearest_res(img_ht)
+            new_aspect_wd = int(img_ht * aspect_ratio)
+            img_wd = find_nearest_res(new_aspect_wd)
         hcf_list = common_divisors(img_ht, img_wd)
         # update the results
         final_return["split_lens"] = hcf_list

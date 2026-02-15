@@ -77,22 +77,31 @@
         adaptive_height: True
         OneLineIconListItem:
             text: "End Colour"
-            on_release: app.preference_toggle(end_colour_icon, "end_colour")
+            on_release: app.preference_toggle(end_colour, "end_colour")
             IconLeftWidget:
-                id: end_colour_icon
+                id: end_colour
                 icon: root.end_colour_icon
                 theme_text_color: "Custom"
                 text_color: root.end_colour_icon_colour
                 on_release: app.preference_toggle(self, "end_colour")
         OneLineIconListItem:
             text: "Hand on Video"
-            on_release: app.preference_toggle(draw_hand_icon, "draw_hand")
+            on_release: app.preference_toggle(draw_hand, "draw_hand")
             IconLeftWidget:
-                id: draw_hand_icon
+                id: draw_hand
                 icon: root.draw_hand_icon
                 theme_text_color: "Custom"
                 text_color: root.draw_hand_icon_colour
                 on_release: app.preference_toggle(self, "draw_hand")
+        OneLineIconListItem:
+            text: "1080p Max Resolution"
+            on_release: app.preference_toggle(max_1080p, "max_1080p")
+            IconLeftWidget:
+                id: max_1080p
+                icon: root.max_1080p_icon
+                theme_text_color: "Custom"
+                text_color: root.max_1080p_icon_colour
+                on_release: app.preference_toggle(self, "max_1080p")
 
 
 ### The kivymd main screen ###

@@ -41,7 +41,7 @@ from screens.divider import MyMDDivider
 from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
     # Running as a PyInstaller bundle
@@ -69,6 +69,8 @@ class PreferencesPop(MDScrollView):
     end_colour_icon_colour = StringProperty("green")
     draw_hand_icon = StringProperty("toggle-switch")
     draw_hand_icon_colour = StringProperty("green")
+    max_1080p_icon = StringProperty("toggle-switch")
+    max_1080p_icon_colour = StringProperty("green")
 
 # app class
 class DlImg2SktchApp(MDApp):
@@ -98,6 +100,7 @@ class DlImg2SktchApp(MDApp):
         self.batch_process = False
         self.end_color = True
         self.draw_hand = True
+        self.max_1080p = True
         self.pref_dialog = None
         self.img_file_count = 0
         self.top_menu_items = {
@@ -272,6 +275,9 @@ class DlImg2SktchApp(MDApp):
         )
         self.txt_dialog.open()
 
+    def txt_dialog_closer(self, instance):
+        self.txt_dialog.dismiss()
+
     def set_split_len(self, value):
         self.split_len = int(value)
         self.split_len_drp.text = str(self.split_len)
@@ -287,6 +293,7 @@ class DlImg2SktchApp(MDApp):
                 path = self.last_upload_path,
                 multiple = False,
                 filters = [["*.jpg","*.png", "*.jpeg", "*.webp"], "*"],
+                preview = True,
             )
             self.is_img_manager_open = True
         except Exception as e:
@@ -352,7 +359,7 @@ class DlImg2SktchApp(MDApp):
         self.batch_process = False
         filename = os.path.basename(self.image_path)
         self.last_upload_path = os.path.dirname(path)
-        api_resp = get_split_lens(path)
+        api_resp = get_split_lens(path, self.max_1080p)
         split_lens = api_resp["split_lens"]
         image_details = api_resp["image_res"]
         if len(image_details) >= 2:
@@ -472,6 +479,15 @@ class DlImg2SktchApp(MDApp):
                 self.pref_scroll.draw_hand_icon = "toggle-switch"
                 self.pref_scroll.draw_hand_icon_colour = "green"
                 self.draw_hand = True
+        elif choice == "max_1080p":
+            if self.max_1080p:
+                self.pref_scroll.max_1080p_icon = "toggle-switch-off"
+                self.pref_scroll.max_1080p_icon_colour = "gray"
+                self.max_1080p = False
+            else:
+                self.pref_scroll.max_1080p_icon = "toggle-switch"
+                self.pref_scroll.max_1080p_icon_colour = "green"
+                self.max_1080p = True
 
     def popup_preference(self):
         if not self.pref_dialog:
@@ -562,6 +578,7 @@ class DlImg2SktchApp(MDApp):
                     "which_platform": platform, 
                     "end_color": self.end_color,
                     "draw_hand": self.draw_hand,
+                    "max_1080p": self.max_1080p,
                     "progress_callback": self.sketch_prog_updater,
                 },
                 daemon=True
@@ -604,6 +621,7 @@ class DlImg2SktchApp(MDApp):
                     "which_platform": platform, 
                     "end_color": self.end_color,
                     "draw_hand": self.draw_hand,
+                    "max_1080p": self.max_1080p,
                     #"progress_callback": self.sketch_prog_updater,
                 },
                 daemon=True
@@ -768,27 +786,24 @@ class DlImg2SktchApp(MDApp):
 
     def events(self, instance, keyboard, keycode, text, modifiers):
         """Handle mobile device button presses (e.g., Android back button)."""
-        #if keyboard in (1001, 27):  # Android back button or equivalent
-        #    if self.is_img_manager_open:
-        #        # Check if we are at the root of the directory tree
-        #        if self.img_file_manager.current_path == self.external_storage:
-        #            self.show_toast_msg(f"Closing file manager from main storage")
-        #            self.img_file_exit_manager()
-        #        else:
-        #            self.img_file_manager.back()  # Navigate back within file manager
-        #        return True  # Consume the event to prevent app exit
-        #    if self.is_vid_manager_open:
-        #        # Check if we are at the root of the directory tree
-        #        if self.vid_file_manager.current_path == self.external_storage:
-        #            self.show_toast_msg(f"Closing file manager from main storage")
-        #            self.vid_file_exit_manager()
-        #        else:
-        #            self.vid_file_manager.back()  # Navigate back within file manager
-        #        return True  # Consume the event to prevent app exit
+        if keyboard in (1001, 27):  # Android back button or equivalent
+            if self.is_img_folder_open:
+                # Check if we are at the root of the directory tree
+                if self.img_fold_manager.current_path == self.external_storage:
+                    self.show_toast_msg(f"Closing file manager from main storage")
+                    self.img_fold_exit_manager()
+                else:
+                    self.img_fold_manager.back()  # Navigate back within file manager
+                return True  # Consume the event to prevent app exit
+            if self.is_vid_manager_open:
+                # Check if we are at the root of the directory tree
+                if self.vid_file_manager.current_path == self.external_storage:
+                    self.show_toast_msg(f"Closing file manager from main storage")
+                    self.vid_file_exit_manager()
+                else:
+                    self.vid_file_manager.back()  # Navigate back within file manager
+                return True  # Consume the event to prevent app exit
         return False
-
-    def txt_dialog_closer(self, instance):
-        self.txt_dialog.dismiss()
 
     def update_checker(self, instance):
         self.txt_dialog.dismiss()
