@@ -5,6 +5,9 @@
 
 ## Change Details
 
+### 0.5.0
+- Adding option to change video output resolution upto 1080p (Full-HD) maximum. Users can set it from `Preference`. Max 1080p will be default, users can turn it off to get full resolution (May slow down the process & not recommended on Android).
+
 ### 0.4.0
 - Using [Kivy-Plyer](https://github.com/kivy/plyer/blob/master/plyer/facades/filechooser.py) to use native file manager. This will also remember the last selected path (if we have done any upload after launching the app, not applicable for Android).
 - Added `Preference` button (Icon) to control the on-off toggles.

@@ -13,6 +13,11 @@ a = Analysis(
     hiddenimports=[
         "kivymd.uix.gridlayout",
         "kivymd.uix.textfield",
+        "plyer.platforms",
+        "plyer.platforms.linux",
+        "plyer.platforms.win",
+        "plyer.platforms.linux.filechooser",
+        "plyer.platforms.win.filechooser",
     ],
     hookspath=[],
     hooksconfig={},
