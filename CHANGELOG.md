@@ -3,6 +3,10 @@
 ## App Details
 - APK for `Android`, EXE for `Windows` & the other file without any extension is for `Linux`. [Documentation Link](https://blog.daslearning.in/llm_ai/genai/image-to-animation.html)
 
+## Download from App Store(s)
+Get it from [Microsoft App Store](https://apps.microsoft.com/detail/9n2w89c5rb7v?hl=en-GB&gl=IN) <br>
+<img width="267" height="313" alt="image" src="https://github.com/user-attachments/assets/11a46745-e47b-4121-a4bc-ed5ddbfd6c8c" />
+
 ## Change Details
 
 ### 0.5.0
