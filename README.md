@@ -16,6 +16,10 @@ An open-source, cross-platform, offline app for Android, Linux, Windows, Mac & i
 You can click on the below Image or this [Youtube Link](https://www.youtube.com/watch?v=_UuAIjSzUJQ) to see the demo. Please let me know in the comments, how do you feel about this App. <br>
 [![ImageToSketch](./docs/images/thumb.png)](https://www.youtube.com/watch?v=_UuAIjSzUJQ)
 
+## 💰 Sponsor Me
+You can buy me a coffee via [this link](https://www.paypal.com/paypalme/soomnathsdas) or tap on below image. Thank you 🙏. <br>
+<a href="https://www.paypal.com/paypalme/soomnathsdas"><img src="./docs/images/donate.svg" height="40"></a>
+
 ## 🖧 Our Scematic Architecture
 To be added...
 
