@@ -19,7 +19,7 @@ source.include_exts = py,png,jpg,kv,atlas
 #source.include_patterns = assets/*,images/*.png
 
 # (list) Source files to exclude (let empty to not exclude anything)
-#source.exclude_exts = spec
+source.exclude_exts = spec, md
 
 # (list) List of directory to exclude (let empty to not exclude anything)
 source.exclude_dirs = tests, logs, bin, dist, patches, .venv, venv, env, .env, p4a_local_recipes
@@ -30,13 +30,6 @@ source.exclude_dirs = tests, logs, bin, dist, patches, .venv, venv, env, .env, p
 
 # (str) Application versioning (method 1)
 #version = 0.0.14
-
-#android.sign = True
-#android.keystore = /home/somnath/myContents/softwares/android/apk/dl-tts.jks
-#android.key.alias = dl_tts_alias
-# use export KEYSTORE_PASSWORD=yourpassword
-#android.keystore.password = %(KEYSTORE_PASSWORD)s
-#android.key.password = %(KEYSTORE_PASSWORD)s
 
 # (str) Application versioning (method 2)
 version.regex = __version__ = ['"](.*)['"]
@@ -60,7 +53,7 @@ icon.filename = %(source.dir)s/data/images/favicon.png
 
 # (list) Supported orientations
 # Valid options are: landscape, portrait, portrait-reverse or landscape-reverse
-orientation = portrait
+orientation = all
 
 # (list) List of service to declare
 #services = NAME:ENTRYPOINT_TO_PY,NAME2:ENTRYPOINT2_TO_PY
@@ -99,8 +92,8 @@ fullscreen = 0
 #android.presplash_lottie = "path/to/lottie/file.json"
 
 # (str) Adaptive icon of the application (used if Android API level is 26+ at runtime)
-#icon.adaptive_foreground.filename = %(source.dir)s/data/icon_fg.png
-#icon.adaptive_background.filename = %(source.dir)s/data/icon_bg.png
+icon.adaptive_foreground.filename = %(source.dir)s/data/images/icon_fg.png
+icon.adaptive_background.filename = %(source.dir)s/data/images/icon_bg.png
 
 # (list) Permissions
 # (See https://developer.android.com/reference/android/Manifest.permission for all the supported syntaxes and properties)
@@ -111,7 +104,7 @@ android.permissions = android.permission.READ_MEDIA_IMAGES, (name=android.permis
 #android.features = android.hardware.usb.host
 
 # (int) Target Android API, should be as high as possible. (See https://developer.android.com/tools/releases/platforms)
-android.api = 34
+android.api = 36
 
 # (int) Minimum API your APK / AAB will support.
 android.minapi = 28
@@ -120,7 +113,7 @@ android.minapi = 28
 #android.sdk = 20
 
 # (str) Android NDK version to use
-android.ndk = 25b
+android.ndk = 28c
 
 # This sets Gradle's maximum JVM heap size to 2048 megabytes (2GB).
 #android.gradle_properties = org.gradle.jvmargs=-Xmx2048m
@@ -259,6 +252,10 @@ android.enable_androidx = True
 
 # (str) screenOrientation to set for the main activity.
 # Valid values can be found at https://developer.android.com/guide/topics/manifest/activity-element
+android.manifest.orientation = fullSensor
+
+# (str) screenOrientation to set for the main activity.
+# Valid values can be found at https://developer.android.com/guide/topics/manifest/activity-element
 #android.manifest.orientation = fullSensor
 
 # (list) Android additional libraries to copy into libs/armeabi
@@ -318,10 +315,16 @@ android.allow_backup = True
 # android.no-byte-compile-python = False
 
 # (str) The format used to package the app for release mode (aab or apk or aar).
-#android.release_artifact = aab
+android.release_artifact = aab
 
 # (str) The format used to package the app for debug mode (apk or aar).
 # android.debug_artifact = apk
+
+# (str) A display cutout is an area on some devices that extends into the display surface.
+# It allows for an edge-to-edge experience while providing space for important sensors on the front of the device.
+# Available options for Android API >= 28 are "default, shortEdges, never" and defaults to never.
+# Android documentation: https://developer.android.com/develop/ui/views/layout/display-cutout
+android.display_cutout = shortEdges
 
 #
 # Python for android (p4a) specific
@@ -334,7 +337,7 @@ p4a.url = https://github.com/daslearning-org/p4a-unofficial.git
 #p4a.fork = kivy
 
 # (str) python-for-android branch to use, defaults to master
-p4a.branch = v0.0.3
+p4a.branch = develop
 
 # ... other configurations
 #pip.trusted_hosts = pypi.org files.pythonhosted.org
@@ -346,7 +349,7 @@ p4a.branch = v0.0.3
 #p4a.source_dir = ./libs
 
 # (str) The directory in which python-for-android should look for your own build recipes (if any)
-p4a.local_recipes = ./p4a_local_recipes
+#p4a.local_recipes = ./p4a_local_recipes
 
 # (str) Filename to the hook for p4a
 #p4a.hook =

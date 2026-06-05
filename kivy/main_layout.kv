@@ -107,9 +107,9 @@
 ### The kivymd main screen ###
 MDScreen:
 
-    MDBoxLayout: # main container
+    <MainBox>: # main container
         orientation: 'vertical'
-        #padding: dp(4)
+        padding: 8, self.top_pad, 8, self.bottom_pad # left, top, right, bottom
         spacing: dp(4)
 
         MDTopAppBar:

@@ -41,7 +41,7 @@ from screens.divider import MyMDDivider
 from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
     # Running as a PyInstaller bundle
@@ -52,6 +52,23 @@ else:
 kv_file_path = os.path.join(base_path, 'main_layout.kv')
 
 # custom kivymd/kivy classes
+class MainBox(MDBoxLayout):
+    """ Takes configuration inputs """
+    top_pad = NumericProperty(0)
+    bottom_pad = NumericProperty(0)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if platform == "android":
+            try:
+                from android.display_cutout import get_height_of_bar
+                self.top_pad = int(get_height_of_bar('status'))
+                self.bottom_pad = int(get_height_of_bar('navigation'))
+            except Exception as e:
+                print(f"Failed android 15 padding: {e}")
+                self.top_pad = 32
+                self.bottom_pad = 48
+
 class TempSpinWait(MDBoxLayout):
     txt = StringProperty()
 
