@@ -472,16 +472,15 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
         # ---> diagnostic code
         print("PyAV:", av.__version__)
         print("FFmpeg:", av.library_versions)
+        for codec in sorted(av.codec.codecs_available):
+            if "264" in codec.lower():
+                print(codec)
         # <--- diag end
 
         src_path = Path(source_vid)
         input_container = av.open(src_path, mode="r")
         output_container = av.open(dest_vid, mode="w")
-        # ---> diagnostic code
-        print("Format:", input_container.format.name)
-        for s in input_container.streams:
-            print("Stream:", s.type, s.codec_context.name)
-        # <--- diag end
+        
         in_stream = input_container.streams.video[0]
         width = in_stream.codec_context.width
         height = in_stream.codec_context.height
@@ -492,10 +491,16 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
         out_stream.height = height
         out_stream.pix_fmt = "yuv420p"
         # Better quality control
-        out_stream.options = {
-            #"crf": "20"  # adjust between 18–23, not working on android with v17
-            "bitrate": "2000000"
-        }
+        #out_stream.options = {
+        #    #"crf": "20"  # adjust between 18–23, not working on android with v17
+        #    "bitrate": "2000000"
+        #}
+        # ---> diagnostic code
+        print("Format:", input_container.format.name)
+        for s in input_container.streams:
+            print("Stream:", s.type, s.codec_context.name)
+        print("Selected codec:", out_stream.codec_context.codec.name)
+        # <--- diag end
         for frame in input_container.decode(video=0):
             packet = out_stream.encode(frame)
             if packet:
