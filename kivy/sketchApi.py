@@ -492,7 +492,10 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
         out_stream.height = height
         out_stream.pix_fmt = "yuv420p"
         # Better quality control
-        out_stream.options = {"crf": "20"}  # adjust between 18–23
+        out_stream.options = {
+            #"crf": "20"  # adjust between 18–23, not working on android with v17
+            "bitrate": "2000000"
+        }
         for frame in input_container.decode(video=0):
             packet = out_stream.encode(frame)
             if packet:
