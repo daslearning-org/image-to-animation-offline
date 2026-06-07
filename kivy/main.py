@@ -60,7 +60,7 @@ if platform == "android":
             video_view = None
 
     @run_on_ui_thread
-    def android_play_video(path):
+    def android_play_video(path, coordinates=None):
         global video_view
         PythonActivity = autoclass('org.kivy.android.PythonActivity')
         VideoView = autoclass('android.widget.VideoView')
@@ -70,10 +70,18 @@ if platform == "android":
         MediaController = autoclass('android.widget.MediaController')
         activity = PythonActivity.mActivity
         video_view = VideoView(activity)
-        params = LayoutParams(
-            LayoutParams.MATCH_PARENT,
-            LayoutParams.MATCH_PARENT
-        )
+        if coordinates:
+            params = LayoutParams(
+                int(coordinates[0]),
+                int(coordinates[1])
+            )
+            params.leftMargin = int(coordinates[2])
+            params.topMargin = int(coordinates[3])
+        else:
+            params = LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT
+            )
         activity.addContentView(video_view, params)
         video_view.setVideoPath(path)
         controller = MediaController(activity)
@@ -174,6 +182,7 @@ class DlImg2SktchApp(MDApp):
         self.draw_hand = True
         self.max_1080p = True
         self.pref_dialog = None
+        self.vid_player_position = None
         self.img_file_count = 0
         self.top_menu_items = {
             "Delete old sketches": {
@@ -758,6 +767,14 @@ class DlImg2SktchApp(MDApp):
                         on_release = self.play_and_vid
                     )
                     down_btn.add_widget(play_an_btn)
+                    # fetch the coordinates
+                    if not self.vid_player_position:
+                        x, y = player_box.to_window(*player_box.pos)
+                        w, h = player_box.size
+                        print(x, y, w, h)
+                        screen_h = Window.height
+                        android_y = screen_h - (y + h)
+                        self.vid_player_position = [w, h, x, android_y]
                 else:
                     player = VideoPlayer(
                         source = message,
@@ -776,7 +793,7 @@ class DlImg2SktchApp(MDApp):
         Plays video on Android platform using native video player
         """
         if platform == "android":
-            android_play_video(self.vid_download_path)
+            android_play_video(self.vid_download_path, self.vid_player_position)
         else:
             print("This is for Android play only!")
 
@@ -901,6 +918,9 @@ class DlImg2SktchApp(MDApp):
                 else:
                     self.vid_file_manager.back()  # Navigate back within file manager
                 return True  # Consume the event to prevent app exit
+            if video_view: # remove the video player on android
+                remove_video_android()
+                return True
         return False
 
     def update_checker(self, instance):
