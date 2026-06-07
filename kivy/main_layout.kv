@@ -103,6 +103,28 @@
                 text_color: root.max_1080p_icon_colour
                 on_release: app.preference_toggle(self, "max_1080p")
 
+<OldFileMgrBox>: #MDBoxLayout
+    id: old_file_mgr
+    orientation: 'vertical'
+    padding: dp(10)
+    spacing: dp(4)
+    MDLabel:
+        text: "If your download is successful, the file will be deleted from internal storage"
+        adaptive_height: True
+
+<ManageOldFilesScrl>: # MDScrollView
+    adaptive_height: True
+    # MDList will be added here from app
+
+<OldFileItem>: #OneLineAvatarIconListItem
+    text: root.vid_file_name
+    IconLeftWidget:
+        icon: "download"
+        on_release: app.old_file_action(self, "download", root.vid_file_name)
+    IconRightWidget:
+        icon: "delete"
+        on_release: app.old_file_action(self, "delete", root.vid_file_name)
+
 
 ### The kivymd main screen ###
 MDScreen:

@@ -9,7 +9,8 @@ Get it from [Microsoft App Store](https://apps.microsoft.com/detail/9n2w89c5rb7v
 
 ## Change Details
 
-### 0.5.1
+### 0.6.0
+- Option to download old sketch animations. [all]
 - Changing `Android` base with new `PyAV` fixes from kivy's p4a. [android]
 - Now using `NDK 28` which will allow 16kb page sizing & eventually we can introduce the app on Google PlayStore too. [android]
 - Fix the file manager height for edge cut out. [android]
