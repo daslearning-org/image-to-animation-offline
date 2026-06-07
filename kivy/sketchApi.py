@@ -470,11 +470,11 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
     try:
         import av
         # ---> diagnostic code
-        print("PyAV:", av.__version__)
-        print("FFmpeg:", av.library_versions)
-        for codec in sorted(av.codec.codecs_available):
-            if "264" in codec.lower():
-                print(codec)
+        print("PyAV: ", av.__version__)
+        #print("FFmpeg: ", av.library_versions)
+        #for codec in sorted(av.codec.codecs_available):
+        #    if "264" in codec.lower():
+        #        print(codec)
         # <--- diag end
 
         src_path = Path(source_vid)
@@ -499,10 +499,10 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
             #"bitrate": "2000000"
         }
         # ---> diagnostic code
-        print("Format:", input_container.format.name)
-        for s in input_container.streams:
-            print("Stream:", s.type, s.codec_context.name)
-        print("Selected codec:", out_stream.codec_context.codec.name)
+        #print("Format: ", input_container.format.name)
+        #for s in input_container.streams:
+        #    print("Stream: ", s.type, s.codec_context.name)
+        #print("Selected codec: ", out_stream.codec_context.codec.name)
         # <--- diag end
         for frame in input_container.decode(video=0):
             packet = out_stream.encode(frame)

@@ -27,10 +27,64 @@ from kivy.metrics import dp, sp
 from kivy.utils import platform
 from kivy.clock import Clock
 from kivy.properties import StringProperty, NumericProperty, ObjectProperty #, BooleanProperty
-if platform == "android":
-    from jnius import autoclass, PythonJavaClass, java_method
 
-# plyer for croos platform capabilties
+# platform specific imports & functions
+if platform == "android":
+    from jnius import autoclass, cast, PythonJavaClass, java_method
+    from android.runnable import run_on_ui_thread
+    video_view = None
+
+    class AndroidVideoComplete(PythonJavaClass):
+        __javainterfaces__ = [
+            'android/media/MediaPlayer$OnCompletionListener'
+        ]
+        @java_method('(Landroid/media/MediaPlayer;)V')
+        def onCompletion(self, mp):
+            print("Video completed")
+            remove_video_android()
+
+    @run_on_ui_thread
+    def remove_video_android():
+        global video_view
+        if video_view:
+            try:
+                video_view.stopPlayback()
+            except:
+                pass
+            parent = video_view.getParent()
+            if parent:
+                cast(
+                    'android.view.ViewGroup',
+                    parent
+                ).removeView(video_view)
+            video_view = None
+
+    @run_on_ui_thread
+    def android_play_video(path):
+        global video_view
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        VideoView = autoclass('android.widget.VideoView')
+        LayoutParams = autoclass(
+            'android.widget.FrameLayout$LayoutParams'
+        )
+        MediaController = autoclass('android.widget.MediaController')
+        activity = PythonActivity.mActivity
+        video_view = VideoView(activity)
+        params = LayoutParams(
+            LayoutParams.MATCH_PARENT,
+            LayoutParams.MATCH_PARENT
+        )
+        activity.addContentView(video_view, params)
+        video_view.setVideoPath(path)
+        controller = MediaController(activity)
+        controller.setAnchorView(video_view)
+        video_view.setMediaController(controller)
+        video_view.setOnCompletionListener(
+            AndroidVideoComplete()
+        )
+        video_view.start()
+
+# plyer for cross platform capabilties
 from plyer import filechooser
 
 # IMPORTANT: Set this property for keyboard behavior
@@ -42,6 +96,7 @@ from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
 __version__ = "0.5.1"
+
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
     # Running as a PyInstaller bundle
@@ -89,7 +144,7 @@ class PreferencesPop(MDScrollView):
     max_1080p_icon = StringProperty("toggle-switch")
     max_1080p_icon_colour = StringProperty("green")
 
-# app class
+### app class ###
 class DlImg2SktchApp(MDApp):
     split_len = NumericProperty(10)
     frame_rate = NumericProperty(25)
@@ -153,7 +208,7 @@ class DlImg2SktchApp(MDApp):
         file_m_height = 1
         # paths setup
         if platform == "android":
-            file_m_height = 0.9 # to be implemented with ndk#28
+            file_m_height = 0.9 # android edge cut out problem
             self.speed_map = {640:20, 360:10, 480:10, 1280:20, 720:20, 1920:20, 1080:20, 2560:40, 1440:20, 3840:40, 2160:40, 7680:40, 4320:40}
             from android.permissions import request_permissions, Permission
             sdk_version = 28
@@ -193,6 +248,7 @@ class DlImg2SktchApp(MDApp):
                 exit_manager=self.img_fold_exit_manager,
                 select_path=self.select_img_folder,
                 selector="folder",  # Restrict to selecting directories only
+                size_hint_y = file_m_height
             )
             fldr_btn = BatchImgFolderBtn()
             file_choose_grid.add_widget(fldr_btn)
@@ -207,6 +263,7 @@ class DlImg2SktchApp(MDApp):
             exit_manager=self.vid_file_exit_manager,
             select_path=self.select_vid_path,
             selector="folder",  # Restrict to selecting directories only
+            size_hint_y = file_m_height
         )
 
         # Menu items
@@ -680,7 +737,7 @@ class DlImg2SktchApp(MDApp):
     def task_complete_callback(self, result):
         player_box = self.root.ids.player_box
         status = result["status"]
-        message = result["message"]
+        message = result["message"] # path of the video
         self.is_cv2_running = False
         if status is True:
             if self.batch_process:
@@ -690,18 +747,38 @@ class DlImg2SktchApp(MDApp):
                 self.vid_download_path = message
                 self.show_toast_msg(f"Video generated at: {message}")
                 player_box.clear_widgets()
-                player = VideoPlayer(
-                    source = message,
-                    options={'fit_mode': 'contain'}
-                )
                 down_btn = VideoActionBtn()
-                player_box.add_widget(player)
+                if platform == "android":
+                    play_an_btn = MDFloatingActionButton(
+                        icon = "play",
+                        type = 'small',
+                        theme_icon_color = "Custom",
+                        md_bg_color = '#e9dff7',
+                        icon_color = '#211c29',
+                        on_release = self.play_and_vid
+                    )
+                    down_btn.add_widget(play_an_btn)
+                else:
+                    player = VideoPlayer(
+                        source = message,
+                        options={'fit_mode': 'contain'}
+                    )
+                    player_box.add_widget(player)
+                    player.state = 'play'
                 player_box.add_widget(down_btn)
-                player.state = 'play'
         else:
             self.show_toast_msg(message, is_error=True)
             if self.batch_process:
                 self.batch_queue.put("next")
+
+    def play_and_vid(self, instance=None):
+        """
+        Plays video on Android platform using native video player
+        """
+        if platform == "android":
+            android_play_video(self.vid_download_path)
+        else:
+            print("This is for Android play only!")
 
     def batch_end_trigger(self):
         # All completed triggered
@@ -740,6 +817,7 @@ class DlImg2SktchApp(MDApp):
         obj_skip_rate = self.root.ids.obj_skip_rate
         bck_skip_rate = self.root.ids.bck_skip_rate
         main_img_duration = self.root.ids.main_img_duration
+        player_box = self.root.ids.player_box
         # start reset
         self.image_path = ""
         self.image_folder = ""
@@ -759,8 +837,11 @@ class DlImg2SktchApp(MDApp):
         obj_skip_rate.text = "8"
         bck_skip_rate.text = "14"
         main_img_duration.text = "2"
-        player_box = self.root.ids.player_box
         player_box.clear_widgets()
+        if platform == "android":
+            global video_view
+            if video_view:
+                remove_video_android()
 
     def all_delete_alert(self):
         del_vid_count = 0

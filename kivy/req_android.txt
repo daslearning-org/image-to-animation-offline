@@ -1,11 +1,12 @@
 kivymd==1.2.0
 kivy[base]==2.3.1
-buildozer
+#buildozer
+https://github.com/daslearning-org/buildozer-unofficial/archive/develop.zip
 Cython==0.29.36
 numpy
 opencv-python
 ffpyplayer
-av==13.1.0
+av
 plyer
 #numpy==1.26.4
 #opencv-python==4.5.1.48
