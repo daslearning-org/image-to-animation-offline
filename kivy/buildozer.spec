@@ -98,7 +98,7 @@ icon.adaptive_background.filename = %(source.dir)s/data/images/icon_bg.png
 # (list) Permissions
 # (See https://developer.android.com/reference/android/Manifest.permission for all the supported syntaxes and properties)
 #android.permissions = android.permission.INTERNET, (name=android.permission.WRITE_EXTERNAL_STORAGE;maxSdkVersion=18)
-android.permissions = android.permission.READ_MEDIA_IMAGES, (name=android.permission.READ_EXTERNAL_STORAGE;maxSdkVersion=32), (name=android.permission.WRITE_EXTERNAL_STORAGE;maxSdkVersion=32)
+android.permissions = android.permission.READ_MEDIA_IMAGES, android.permission.WAKE_LOCK, (name=android.permission.READ_EXTERNAL_STORAGE;maxSdkVersion=32), (name=android.permission.WRITE_EXTERNAL_STORAGE;maxSdkVersion=32)
 
 # (list) features (adds uses-feature -tags to manifest)
 #android.features = android.hardware.usb.host

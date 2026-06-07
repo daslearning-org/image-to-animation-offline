@@ -183,6 +183,7 @@ class DlImg2SktchApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         Window.bind(on_keyboard=self.events)
+        self.wake_lock = None
 
     def build(self):
         self.theme_cls.primary_palette = "Blue"
@@ -246,9 +247,9 @@ class DlImg2SktchApp(MDApp):
             except Exception as e:
                 print(f"Could not check the android SDK version: {e}")
             if sdk_version >= 33:  # Android 13+
-                permissions = [Permission.READ_MEDIA_IMAGES]
+                permissions = [Permission.READ_MEDIA_IMAGES, Permission.WAKE_LOCK]
             else:  # Android 9–12
-                permissions = [Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE]
+                permissions = [Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE, Permission.WAKE_LOCK]
             request_permissions(permissions)
             context = autoclass('org.kivy.android.PythonActivity').mActivity
             android_path = context.getExternalFilesDir(None).getAbsolutePath()
@@ -315,6 +316,30 @@ class DlImg2SktchApp(MDApp):
         )
         self.pref_scroll = PreferencesPop()
 
+    def acquire_wakelock(self):
+        if self.wake_lock:
+            return  # already acquired
+        try:
+            PythonActivity = autoclass("org.kivy.android.PythonActivity")
+            Context = autoclass("android.content.Context")
+            activity = PythonActivity.mActivity
+            PowerManager = autoclass("android.os.PowerManager")
+            power_manager = cast(PowerManager, activity.getSystemService(Context.POWER_SERVICE))
+            # Create wakelock (use PowerManager.FULL_WAKE_LOCK for full wakelock)
+            self.wake_lock = power_manager.newWakeLock(
+                PowerManager.FULL_WAKE_LOCK, "MyApp::WakeLockTag"
+            )
+            self.wake_lock.acquire()
+            print("WakeLock acquired")
+        except Exception as e:
+            print(f"Wake lock aquire error: {e}")
+
+    def release_wakelock(self):
+        if self.wake_lock and self.wake_lock.isHeld():
+            self.wake_lock.release()
+            self.wake_lock = None
+            print("WakeLock released")
+
     def menu_bar_callback(self, button):
         self.menu.caller = button
         self.menu.open()
@@ -367,8 +392,8 @@ class DlImg2SktchApp(MDApp):
         if len(total_vids) >= 1:
             self.old_file_mgr_open = True
             self.oldFileModal = ModalView(
-                size_hint=(0.8, 0.8),
-                on_dismiss=self.on_old_file_mgr_dismiss,
+                size_hint=(1, 0.8),
+                #on_dismiss=self.on_old_file_mgr_dismiss,
                 background_color=[243, 215, 230, 0.8],
                 #auto_dismiss=False # if set to False, it will not disappear by outside clicks
             )
@@ -398,11 +423,12 @@ class DlImg2SktchApp(MDApp):
     def dismiss_old_file_mgr(self, instance=None):
         if self.oldFileModal:
             self.oldFileModal.dismiss(force=True)
+        self.old_file_mgr_open = False
+        self.oldFileModal = None
 
     def on_old_file_mgr_dismiss(self, instance=None):
         self.old_file_mgr_open = False
         self.oldFileModal = None
-        return True
 
     def show_toast_msg(self, message, is_error=False, duration=3):
         from kivymd.uix.snackbar import MDSnackbar
@@ -659,6 +685,8 @@ class DlImg2SktchApp(MDApp):
         self.pref_dialog.open()
 
     def submit_sketch_req(self):
+        if platform == "android":
+            Clock.schedule_once(lambda dt: self.acquire_wakelock())
         player_box = self.root.ids.player_box
         if self.batch_process:
             if self.image_folder == "":
@@ -831,6 +859,8 @@ class DlImg2SktchApp(MDApp):
             self.show_toast_msg(message, is_error=True)
             if self.batch_process:
                 self.batch_queue.put("next")
+        if platform == "android":
+            Clock.schedule_once(lambda dt: self.release_wakelock())
 
     def set_video_player(self):
         player_box = self.root.ids.player_box
@@ -1018,6 +1048,7 @@ class DlImg2SktchApp(MDApp):
                 return True
             if self.old_file_mgr_open and self.oldFileModal:
                 self.dismiss_old_file_mgr()
+                return True
         return False
 
     def update_checker(self, instance):
