@@ -29,10 +29,10 @@ from kivy.clock import Clock
 from kivy.properties import StringProperty, NumericProperty, ObjectProperty #, BooleanProperty
 
 # platform specific imports & functions
+video_view = None
 if platform == "android":
     from jnius import autoclass, cast, PythonJavaClass, java_method
     from android.runnable import run_on_ui_thread
-    video_view = None
 
     class AndroidVideoComplete(PythonJavaClass):
         __javainterfaces__ = [
@@ -901,6 +901,7 @@ class DlImg2SktchApp(MDApp):
 
     def events(self, instance, keyboard, keycode, text, modifiers):
         """Handle mobile device button presses (e.g., Android back button)."""
+        global video_view
         if keyboard in (1001, 27):  # Android back button or equivalent
             if self.is_img_folder_open:
                 # Check if we are at the root of the directory tree
