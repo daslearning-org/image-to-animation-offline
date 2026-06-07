@@ -16,21 +16,84 @@ from kivymd.uix.filemanager import MDFileManager
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.scrollview import MDScrollView
-from kivymd.uix.list import MDList, OneLineIconListItem, IconLeftWidget, IconRightWidget
+from kivymd.uix.list import MDList, OneLineIconListItem, OneLineAvatarIconListItem, IconLeftWidget, IconRightWidget
 from kivymd.uix.progressbar import MDProgressBar
 
 from kivy.uix.videoplayer import VideoPlayer
 from kivy.uix.widget import Widget
+from kivy.uix.modalview import ModalView
 from kivy.lang import Builder
 from kivy.core.window import Window
 from kivy.metrics import dp, sp
 from kivy.utils import platform
 from kivy.clock import Clock
 from kivy.properties import StringProperty, NumericProperty, ObjectProperty #, BooleanProperty
-if platform == "android":
-    from jnius import autoclass, PythonJavaClass, java_method
 
-# plyer for croos platform capabilties
+# platform specific imports & functions
+video_view = None
+if platform == "android":
+    from jnius import autoclass, cast, PythonJavaClass, java_method
+    from android.runnable import run_on_ui_thread
+
+    class AndroidVideoComplete(PythonJavaClass):
+        __javainterfaces__ = [
+            'android/media/MediaPlayer$OnCompletionListener'
+        ]
+        @java_method('(Landroid/media/MediaPlayer;)V')
+        def onCompletion(self, mp):
+            print("Video completed")
+            remove_video_android()
+
+    @run_on_ui_thread
+    def remove_video_android():
+        global video_view
+        if video_view:
+            try:
+                video_view.stopPlayback()
+            except:
+                pass
+            parent = video_view.getParent()
+            if parent:
+                cast(
+                    'android.view.ViewGroup',
+                    parent
+                ).removeView(video_view)
+            video_view = None
+
+    @run_on_ui_thread
+    def android_play_video(path, coordinates=None):
+        global video_view
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        VideoView = autoclass('android.widget.VideoView')
+        LayoutParams = autoclass(
+            'android.widget.FrameLayout$LayoutParams'
+        )
+        MediaController = autoclass('android.widget.MediaController')
+        activity = PythonActivity.mActivity
+        video_view = VideoView(activity)
+        if coordinates:
+            params = LayoutParams(
+                int(coordinates[0]),
+                int(coordinates[1])
+            )
+            params.leftMargin = int(coordinates[2])
+            params.topMargin = int(coordinates[3])
+        else:
+            params = LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT
+            )
+        activity.addContentView(video_view, params)
+        video_view.setVideoPath(path)
+        controller = MediaController(activity)
+        controller.setAnchorView(video_view)
+        video_view.setMediaController(controller)
+        video_view.setOnCompletionListener(
+            AndroidVideoComplete()
+        )
+        video_view.start()
+
+# plyer for cross platform capabilties
 from plyer import filechooser
 
 # IMPORTANT: Set this property for keyboard behavior
@@ -41,7 +104,8 @@ from screens.divider import MyMDDivider
 from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
-__version__ = "0.5.0"
+__version__ = "0.6.0"
+
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
     # Running as a PyInstaller bundle
@@ -52,6 +116,23 @@ else:
 kv_file_path = os.path.join(base_path, 'main_layout.kv')
 
 # custom kivymd/kivy classes
+class MainBox(MDBoxLayout):
+    """ Takes configuration inputs """
+    top_pad = NumericProperty(0)
+    bottom_pad = NumericProperty(0)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if platform == "android":
+            try:
+                from android.display_cutout import get_height_of_bar
+                self.top_pad = int(get_height_of_bar('status'))
+                self.bottom_pad = int(get_height_of_bar('navigation'))
+            except Exception as e:
+                print(f"Failed android 15 padding: {e}")
+                self.top_pad = 32
+                self.bottom_pad = 48
+
 class TempSpinWait(MDBoxLayout):
     txt = StringProperty()
 
@@ -72,7 +153,16 @@ class PreferencesPop(MDScrollView):
     max_1080p_icon = StringProperty("toggle-switch")
     max_1080p_icon_colour = StringProperty("green")
 
-# app class
+class OldFileMgrBox(MDBoxLayout):
+    pass
+
+class ManageOldFilesScrl(MDScrollView):
+    txt = StringProperty()
+
+class OldFileItem(OneLineAvatarIconListItem):
+    vid_file_name = StringProperty("")
+
+### app class ###
 class DlImg2SktchApp(MDApp):
     split_len = NumericProperty(10)
     frame_rate = NumericProperty(25)
@@ -93,6 +183,7 @@ class DlImg2SktchApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         Window.bind(on_keyboard=self.events)
+        self.wake_lock = None
 
     def build(self):
         self.theme_cls.primary_palette = "Blue"
@@ -101,9 +192,17 @@ class DlImg2SktchApp(MDApp):
         self.end_color = True
         self.draw_hand = True
         self.max_1080p = True
+        self.old_file_mgr_open = False
+        self.oldFileModal = None
         self.pref_dialog = None
+        self.vid_player_position = None
         self.img_file_count = 0
         self.top_menu_items = {
+            "Download old sketches": {
+                "icon": "download",
+                "action": "oldfiles",
+                "url": "",
+            },
             "Delete old sketches": {
                 "icon": "delete",
                 "action": "clear",
@@ -136,7 +235,7 @@ class DlImg2SktchApp(MDApp):
         file_m_height = 1
         # paths setup
         if platform == "android":
-            file_m_height = 0.9 # to be implemented with ndk#28
+            file_m_height = 0.9 # android edge cut out problem
             self.speed_map = {640:20, 360:10, 480:10, 1280:20, 720:20, 1920:20, 1080:20, 2560:40, 1440:20, 3840:40, 2160:40, 7680:40, 4320:40}
             from android.permissions import request_permissions, Permission
             sdk_version = 28
@@ -148,9 +247,9 @@ class DlImg2SktchApp(MDApp):
             except Exception as e:
                 print(f"Could not check the android SDK version: {e}")
             if sdk_version >= 33:  # Android 13+
-                permissions = [Permission.READ_MEDIA_IMAGES]
+                permissions = [Permission.READ_MEDIA_IMAGES, Permission.WAKE_LOCK]
             else:  # Android 9–12
-                permissions = [Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE]
+                permissions = [Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE, Permission.WAKE_LOCK]
             request_permissions(permissions)
             context = autoclass('org.kivy.android.PythonActivity').mActivity
             android_path = context.getExternalFilesDir(None).getAbsolutePath()
@@ -176,6 +275,7 @@ class DlImg2SktchApp(MDApp):
                 exit_manager=self.img_fold_exit_manager,
                 select_path=self.select_img_folder,
                 selector="folder",  # Restrict to selecting directories only
+                size_hint_y = file_m_height
             )
             fldr_btn = BatchImgFolderBtn()
             file_choose_grid.add_widget(fldr_btn)
@@ -190,6 +290,7 @@ class DlImg2SktchApp(MDApp):
             exit_manager=self.vid_file_exit_manager,
             select_path=self.select_vid_path,
             selector="folder",  # Restrict to selecting directories only
+            size_hint_y = file_m_height
         )
 
         # Menu items
@@ -214,6 +315,30 @@ class DlImg2SktchApp(MDApp):
             width_mult=4,
         )
         self.pref_scroll = PreferencesPop()
+
+    def acquire_wakelock(self):
+        if self.wake_lock:
+            return  # already acquired
+        try:
+            PythonActivity = autoclass("org.kivy.android.PythonActivity")
+            Context = autoclass("android.content.Context")
+            activity = PythonActivity.mActivity
+            PowerManager = autoclass("android.os.PowerManager")
+            power_manager = cast(PowerManager, activity.getSystemService(Context.POWER_SERVICE))
+            # Create wakelock (use PowerManager.FULL_WAKE_LOCK for full wakelock)
+            self.wake_lock = power_manager.newWakeLock(
+                PowerManager.FULL_WAKE_LOCK, "MyApp::WakeLockTag"
+            )
+            self.wake_lock.acquire()
+            print("WakeLock acquired")
+        except Exception as e:
+            print(f"Wake lock aquire error: {e}")
+
+    def release_wakelock(self):
+        if self.wake_lock and self.wake_lock.isHeld():
+            self.wake_lock.release()
+            self.wake_lock = None
+            print("WakeLock released")
 
     def menu_bar_callback(self, button):
         self.menu.caller = button
@@ -252,6 +377,58 @@ class DlImg2SktchApp(MDApp):
             )
         elif action == "clear":
             self.all_delete_alert()
+        elif action == "oldfiles":
+            self.show_old_file_mgr()
+
+    def show_old_file_mgr(self):
+        """
+        This manages the old sketch files
+        """
+        self.dismiss_old_file_mgr()
+        total_vids = []
+        for filename in os.listdir(self.video_dir):
+            if filename.endswith(".mp4") or filename.endswith(".avi"):
+                total_vids.append(filename)
+        if len(total_vids) >= 1:
+            self.old_file_mgr_open = True
+            self.oldFileModal = ModalView(
+                size_hint=(1, 0.8),
+                #on_dismiss=self.on_old_file_mgr_dismiss,
+                background_color=[243, 215, 230, 0.8],
+                #auto_dismiss=False # if set to False, it will not disappear by outside clicks
+            )
+            oldFileBox = OldFileMgrBox()
+            oldFileScroll = ManageOldFilesScrl()
+            kivyFileList = MDList(
+                adaptive_height = True
+            )
+            oldFileCloseBtn = MDFlatButton(
+                text="CANCEL",
+                theme_text_color="Custom",
+                text_color=self.theme_cls.primary_color,
+                on_release=self.dismiss_old_file_mgr
+            )
+            for vid in total_vids:
+                singleVidItem = OldFileItem()
+                singleVidItem.vid_file_name = vid
+                kivyFileList.add_widget(singleVidItem)
+            oldFileScroll.add_widget(kivyFileList)
+            oldFileBox.add_widget(oldFileScroll)
+            oldFileBox.add_widget(oldFileCloseBtn)
+            self.oldFileModal.add_widget(oldFileBox)
+            self.oldFileModal.open()
+        else:
+            self.show_toast_msg("There is no old sketch video file.")
+
+    def dismiss_old_file_mgr(self, instance=None):
+        if self.oldFileModal:
+            self.oldFileModal.dismiss(force=True)
+        self.old_file_mgr_open = False
+        self.oldFileModal = None
+
+    def on_old_file_mgr_dismiss(self, instance=None):
+        self.old_file_mgr_open = False
+        self.oldFileModal = None
 
     def show_toast_msg(self, message, is_error=False, duration=3):
         from kivymd.uix.snackbar import MDSnackbar
@@ -286,7 +463,7 @@ class DlImg2SktchApp(MDApp):
     def open_img_file_manager(self):
         """Open the file manager to select an image file. On android use Downloads or Pictures folders only"""
         try:
-            if not self.last_upload_path:
+            if not self.last_upload_path or platform == "android":
                 self.last_upload_path = self.external_storage
             filechooser.open_file(
                 on_selection = self.handle_img_selection,
@@ -306,6 +483,7 @@ class DlImg2SktchApp(MDApp):
         self.is_img_manager_open = False
         if selection:
             image_path = str(selection[0])
+            self.last_upload_path = os.path.dirname(image_path)
             Clock.schedule_once(lambda dt: self.select_img_path(image_path))
 
     def open_img_fldr_manager(self):
@@ -408,6 +586,8 @@ class DlImg2SktchApp(MDApp):
             self.vid_download_path = ""
             player_box = self.root.ids.player_box
             player_box.clear_widgets()
+            if self.old_file_mgr_open:
+                self.show_old_file_mgr()
         except Exception as e:
             print(f"Error saving file: {e}")
             self.show_toast_msg(f"Error saving file: {e}", is_error=True)
@@ -505,6 +685,8 @@ class DlImg2SktchApp(MDApp):
         self.pref_dialog.open()
 
     def submit_sketch_req(self):
+        if platform == "android":
+            Clock.schedule_once(lambda dt: self.acquire_wakelock())
         player_box = self.root.ids.player_box
         if self.batch_process:
             if self.image_folder == "":
@@ -661,9 +843,9 @@ class DlImg2SktchApp(MDApp):
             self.batch_queue.put("stop")
 
     def task_complete_callback(self, result):
-        player_box = self.root.ids.player_box
+        #player_box = self.root.ids.player_box
         status = result["status"]
-        message = result["message"]
+        message = result["message"] # path of the video
         self.is_cv2_running = False
         if status is True:
             if self.batch_process:
@@ -672,19 +854,53 @@ class DlImg2SktchApp(MDApp):
             else:
                 self.vid_download_path = message
                 self.show_toast_msg(f"Video generated at: {message}")
-                player_box.clear_widgets()
-                player = VideoPlayer(
-                    source = message,
-                    options={'fit_mode': 'contain'}
-                )
-                down_btn = VideoActionBtn()
-                player_box.add_widget(player)
-                player_box.add_widget(down_btn)
-                player.state = 'play'
+                self.set_video_player()
         else:
             self.show_toast_msg(message, is_error=True)
             if self.batch_process:
                 self.batch_queue.put("next")
+        if platform == "android":
+            Clock.schedule_once(lambda dt: self.release_wakelock())
+
+    def set_video_player(self):
+        player_box = self.root.ids.player_box
+        player_box.clear_widgets()
+        down_btn = VideoActionBtn()
+        if platform == "android":
+            play_an_btn = MDFloatingActionButton(
+                icon = "play",
+                type = 'small',
+                theme_icon_color = "Custom",
+                md_bg_color = '#e9dff7',
+                icon_color = '#211c29',
+                on_release = self.play_android_vid
+            )
+            down_btn.add_widget(play_an_btn)
+            # fetch the coordinates
+            if not self.vid_player_position:
+                x, y = player_box.to_window(*player_box.pos)
+                w, h = player_box.size
+                print(x, y, w, h)
+                screen_h = Window.height
+                android_y = screen_h - (y + h)
+                self.vid_player_position = [w, h, x, android_y]
+        else:
+            player = VideoPlayer(
+                source = self.vid_download_path,
+                options={'fit_mode': 'contain'}
+            )
+            player_box.add_widget(player)
+            player.state = 'play'
+        player_box.add_widget(down_btn)
+
+    def play_android_vid(self, instance=None):
+        """
+        Plays video on Android platform using native video player
+        """
+        if platform == "android":
+            android_play_video(self.vid_download_path, self.vid_player_position)
+        else:
+            print("This is for Android play only!")
 
     def batch_end_trigger(self):
         # All completed triggered
@@ -723,6 +939,7 @@ class DlImg2SktchApp(MDApp):
         obj_skip_rate = self.root.ids.obj_skip_rate
         bck_skip_rate = self.root.ids.bck_skip_rate
         main_img_duration = self.root.ids.main_img_duration
+        player_box = self.root.ids.player_box
         # start reset
         self.image_path = ""
         self.image_folder = ""
@@ -742,8 +959,30 @@ class DlImg2SktchApp(MDApp):
         obj_skip_rate.text = "8"
         bck_skip_rate.text = "14"
         main_img_duration.text = "2"
-        player_box = self.root.ids.player_box
         player_box.clear_widgets()
+        if platform == "android":
+            global video_view
+            if video_view:
+                remove_video_android()
+
+    def old_file_action(self, instance, choice:str, vid_file_name):
+        """
+        This will take actions like download, delete & play for old files
+        """
+        flagActionTaken = False
+        try:
+            file_path = os.path.join(self.video_dir, vid_file_name)
+            if choice == "delete":
+                os.unlink(file_path)
+                self.show_toast_msg(f"Deleted {vid_file_name}")
+                flagActionTaken = True
+            elif choice == "download":
+                self.vid_download_path = file_path
+                self.open_vid_file_manager()
+            if flagActionTaken and self.old_file_mgr_open:
+                self.show_old_file_mgr()
+        except Exception as e:
+            print(f"Old file action: {choice} has failed with error: {e}")
 
     def all_delete_alert(self):
         del_vid_count = 0
@@ -786,6 +1025,7 @@ class DlImg2SktchApp(MDApp):
 
     def events(self, instance, keyboard, keycode, text, modifiers):
         """Handle mobile device button presses (e.g., Android back button)."""
+        global video_view
         if keyboard in (1001, 27):  # Android back button or equivalent
             if self.is_img_folder_open:
                 # Check if we are at the root of the directory tree
@@ -803,6 +1043,12 @@ class DlImg2SktchApp(MDApp):
                 else:
                     self.vid_file_manager.back()  # Navigate back within file manager
                 return True  # Consume the event to prevent app exit
+            if video_view: # remove the video player on android
+                remove_video_android()
+                return True
+            if self.old_file_mgr_open and self.oldFileModal:
+                self.dismiss_old_file_mgr()
+                return True
         return False
 
     def update_checker(self, instance):
