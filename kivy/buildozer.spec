@@ -38,8 +38,8 @@ version.filename = %(source.dir)s/main.py
 # (list) Application requirements
 # /<your-codebase>/.buildozer/android/platform/build-arm64-v8a/build/python-installs/ttssts/arm64-v8a
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3, kivy==2.3.1, kivymd==1.2.0, pyjnius, android, docutils, filetype, pillow, Pygments, requests, numpy, ffmpeg, av, opencv, plyer
-# libx264, av_codecs, ffpyplayer
+requirements = python3, kivy==2.3.1, kivymd==1.2.0, pyjnius, android, docutils, filetype, pillow, Pygments, requests, numpy, av_codecs, ffmpeg, av, opencv, plyer
+# libx264, ffpyplayer
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes

@@ -10,7 +10,8 @@ Get it from [Microsoft App Store](https://apps.microsoft.com/detail/9n2w89c5rb7v
 ## Change Details
 
 ### 0.5.1
-- Changing `Android` base with new `PyAV` fixes from kivy.
+- Changing `Android` base with new `PyAV` fixes from kivy. [android]
+- Now using `NDK 28` which will allow 16kb page sizing & eventually we can introduce the app on Google PlayStore too. [android]
 
 ### 0.5.0
 - Adding option to change video output resolution upto 1080p (Full-HD) maximum. Users can set it from `Preference`. Max 1080p will be default, users can turn it off to get full resolution (May slow down the process & not recommended on Android).

@@ -486,15 +486,18 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
         height = in_stream.codec_context.height
         fps = in_stream.average_rate
         # set output params
-        out_stream = output_container.add_stream("h264", rate=fps)
+        if platform == "android":
+            out_stream = output_container.add_stream("libx264", rate=fps)
+        else:
+            out_stream = output_container.add_stream("h264", rate=fps)
         out_stream.width = width
         out_stream.height = height
         out_stream.pix_fmt = "yuv420p"
         # Better quality control
-        #out_stream.options = {
-        #    #"crf": "20"  # adjust between 18–23, not working on android with v17
-        #    "bitrate": "2000000"
-        #}
+        out_stream.options = {
+            "crf": "20"  # adjust between 18–23, not working on android with v17
+            #"bitrate": "2000000"
+        }
         # ---> diagnostic code
         print("Format:", input_container.format.name)
         for s in input_container.streams:
