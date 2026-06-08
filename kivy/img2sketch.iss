@@ -3,7 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "Image to Animation - Offline"
-#define MyAppVersion "0.3.0"
+#define MyAppVersion "0.6.0"
 #define MyAppPublisher "DasLearning"
 #define MyAppURL "https://daslearning.in/apps/"
 #define MyAppExeName "Img2Sketch.exe"
