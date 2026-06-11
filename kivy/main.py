@@ -105,7 +105,7 @@ from screens.divider import MyMDDivider
 from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
-__version__ = "0.6.1"
+__version__ = "0.6.2"
 
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
@@ -328,7 +328,7 @@ class DlImg2SktchApp(MDApp):
                     permission_flag = False
                     break
             if not permission_flag:
-                request_permissions(self.android_permissions)
+                request_permissions(self.android_permissions, self.permission_callback)
             return permission_flag
         else:
             return True
@@ -492,29 +492,47 @@ class DlImg2SktchApp(MDApp):
                     preview = True,
                 )
                 self.is_img_manager_open = True
-            # else pop up to open settings
-            else:
-                buttons = [
-                    MDFlatButton(
-                        text="Cancel",
-                        theme_text_color="Custom",
-                        text_color=self.theme_cls.primary_color,
-                        on_release=self.txt_dialog_closer
-                    ),
-                    MDFlatButton(
-                        text="Open Settings",
-                        theme_text_color="Custom",
-                        text_color="orange",
-                        on_release=self.open_android_settings
-                    ),
-                ]
-                self.show_text_dialog(
-                    "Permissions Missing",
-                    "Please grant the permissions from Settings.",
-                    buttons
-                )
         except Exception as e:
             self.show_toast_msg(f"Error: {e}", is_error=True)
+
+    def permission_callback(self, permissions, results):
+        # results is a list of booleans corresponding to requested permissions
+        usr_deny_flag = False
+        if False in results:
+            # the user checked "Don't ask again" or denied it twice.
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            current_activity = PythonActivity.mActivity
+            # Check rationale status via Android API
+            for permission in permissions:
+                should_show = current_activity.shouldShowRequestPermissionRationale(permission)
+                if not should_show:
+                    usr_deny_flag = True
+                    break
+            if usr_deny_flag:
+                # User denied twice / blocked permanently! Show redirect popup.
+                print("Permission is denied by user!")
+                Clock.schedule_once(lambda dt: self.show_settings_popup())
+
+    def show_settings_popup(self):
+        buttons = [
+            MDFlatButton(
+                text="Cancel",
+                theme_text_color="Custom",
+                text_color=self.theme_cls.primary_color,
+                on_release=self.txt_dialog_closer
+            ),
+            MDFlatButton(
+                text="Open Settings",
+                theme_text_color="Custom",
+                text_color="orange",
+                on_release=self.open_android_settings
+            ),
+        ]
+        self.show_text_dialog(
+            "Permissions Missing",
+            "Please grant the permissions from Settings.",
+            buttons
+        )
 
     def open_android_settings(self, instance=None):
         self.txt_dialog_closer()
