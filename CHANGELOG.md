@@ -9,6 +9,9 @@ Get it from [Microsoft App Store](https://apps.microsoft.com/detail/9n2w89c5rb7v
 
 ## Change Details
 
+## 0.6.2
+- Permission pop-up to take users to `App Settings` if only user has denied two times. [android]
+
 ## 0.6.1
 - Adding a check if required permissions are present on clicking `Upload` button. [android]
 
