@@ -32,6 +32,7 @@ from kivy.properties import StringProperty, NumericProperty, ObjectProperty #, B
 # platform specific imports & functions
 video_view = None
 if platform == "android":
+    from android.permissions import check_permission, request_permissions, Permission
     from jnius import autoclass, cast, PythonJavaClass, java_method
     from android.runnable import run_on_ui_thread
 
@@ -104,7 +105,7 @@ from screens.divider import MyMDDivider
 from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
@@ -237,7 +238,8 @@ class DlImg2SktchApp(MDApp):
         if platform == "android":
             file_m_height = 0.9 # android edge cut out problem
             self.speed_map = {640:20, 360:10, 480:10, 1280:20, 720:20, 1920:20, 1080:20, 2560:40, 1440:20, 3840:40, 2160:40, 7680:40, 4320:40}
-            from android.permissions import request_permissions, Permission
+            self.android_permissions = []
+            all_android_permissions = [Permission.WAKE_LOCK]
             sdk_version = 28
             try:
                 VERSION = autoclass('android.os.Build$VERSION')
@@ -247,10 +249,11 @@ class DlImg2SktchApp(MDApp):
             except Exception as e:
                 print(f"Could not check the android SDK version: {e}")
             if sdk_version >= 33:  # Android 13+
-                permissions = [Permission.READ_MEDIA_IMAGES, Permission.WAKE_LOCK]
+                self.android_permissions.extend([Permission.READ_MEDIA_IMAGES])
             else:  # Android 9–12
-                permissions = [Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE, Permission.WAKE_LOCK]
-            request_permissions(permissions)
+                self.android_permissions.extend([Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE])
+            all_android_permissions.extend(self.android_permissions)
+            request_permissions(all_android_permissions)
             context = autoclass('org.kivy.android.PythonActivity').mActivity
             android_path = context.getExternalFilesDir(None).getAbsolutePath()
             self.video_dir = os.path.join(android_path, 'generated')
@@ -315,6 +318,20 @@ class DlImg2SktchApp(MDApp):
             width_mult=4,
         )
         self.pref_scroll = PreferencesPop()
+
+    def check_request_android_permission(self):
+        if platform == "android":
+            permission_flag = True
+            for permission in self.android_permissions:
+                tmp_flag = check_permission(permission)
+                if not tmp_flag:
+                    permission_flag = False
+                    break
+            if not permission_flag:
+                request_permissions(self.android_permissions)
+            return permission_flag
+        else:
+            return True
 
     def acquire_wakelock(self):
         if self.wake_lock:
@@ -452,7 +469,7 @@ class DlImg2SktchApp(MDApp):
         )
         self.txt_dialog.open()
 
-    def txt_dialog_closer(self, instance):
+    def txt_dialog_closer(self, instance=None):
         self.txt_dialog.dismiss()
 
     def set_split_len(self, value):
@@ -463,18 +480,56 @@ class DlImg2SktchApp(MDApp):
     def open_img_file_manager(self):
         """Open the file manager to select an image file. On android use Downloads or Pictures folders only"""
         try:
-            if not self.last_upload_path or platform == "android":
-                self.last_upload_path = self.external_storage
-            filechooser.open_file(
-                on_selection = self.handle_img_selection,
-                path = self.last_upload_path,
-                multiple = False,
-                filters = [["*.JPG", "*.jpg","*.png", "*.jpeg", "*.webp"], "*"],
-                preview = True,
-            )
-            self.is_img_manager_open = True
+            permission_flag = self.check_request_android_permission()
+            if permission_flag:
+                if not self.last_upload_path or platform == "android":
+                    self.last_upload_path = self.external_storage
+                filechooser.open_file(
+                    on_selection = self.handle_img_selection,
+                    path = self.last_upload_path,
+                    multiple = False,
+                    filters = [["*.JPG", "*.jpg","*.png", "*.jpeg", "*.webp"], "*"],
+                    preview = True,
+                )
+                self.is_img_manager_open = True
+            # else pop up to open settings
+            else:
+                buttons = [
+                    MDFlatButton(
+                        text="Cancel",
+                        theme_text_color="Custom",
+                        text_color=self.theme_cls.primary_color,
+                        on_release=self.txt_dialog_closer
+                    ),
+                    MDFlatButton(
+                        text="Open Settings",
+                        theme_text_color="Custom",
+                        text_color="orange",
+                        on_release=self.open_android_settings
+                    ),
+                ]
+                self.show_text_dialog(
+                    "Permissions Missing",
+                    "Please grant the permissions from Settings.",
+                    buttons
+                )
         except Exception as e:
             self.show_toast_msg(f"Error: {e}", is_error=True)
+
+    def open_android_settings(self, instance=None):
+        self.txt_dialog_closer()
+        # Target Android Native Intents
+        Intent = autoclass('android.content.Intent')
+        Settings = autoclass('android.provider.Settings')
+        Uri = autoclass('android.net.Uri')
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        # Create intent to open this specific app's settings details
+        activity = PythonActivity.mActivity
+        intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        uri = Uri.fromParts("package", activity.getPackageName(), None)
+        intent.setData(uri)
+        # Launch settings
+        activity.startActivity(intent)
 
     def handle_img_selection(self, selection=None):
         '''
@@ -528,7 +583,7 @@ class DlImg2SktchApp(MDApp):
         print(f"Initial split len: {self.split_len}")
 
     def select_img_path(self, path: str):
-        if not (path.endswith(".jpg") or path.endswith(".jpeg") or path.endswith(".png") or path.endswith(".webp")):
+        if not path.endswith((".jpg", ".JPG", ".jpeg", ".JPEG", ".png", ".PNG", ".webp", ".WEBP")):
             self.show_toast_msg(f"Selected file: `{path}` is not an image", is_error=True)
             self.image_path = ""
             return

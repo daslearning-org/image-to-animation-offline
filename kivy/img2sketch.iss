@@ -2,6 +2,11 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 ; Non-commercial use only
 
+; Image to Sketch Animation
+; DasLearning.ImagetoSketchAnimation
+; CN=4735D933-044C-4EDD-84CB-C9AEA4DFED0E
+; DasLearning
+
 #define MyAppName "Image to Animation - Offline"
 #define MyAppVersion "0.6.0"
 #define MyAppPublisher "DasLearning"
