@@ -990,8 +990,14 @@ class DlImg2SktchApp(MDApp):
             from zipfile import ZipFile
             with ZipFile(folder_zip_full, "w") as zip_obj:
                 for file in self.batch_op_files:
-                    zip_obj.write(file, os.path.basename(file))
-                    os.remove(file)
+                    if os.path.exists(file):
+                        try:
+                            zip_obj.write(file, os.path.basename(file))
+                            os.remove(file)
+                        except Exception as e:
+                            print(f"Error while zipping: {e}")
+                    else:
+                        print(f"{file} is not found.")
             self.show_toast_msg(f"Batch process complete & output file is: {folder_zip_full}")
             player_box.add_widget(MDLabel(text=f"Batch process complete & output file is: {folder_zip_full}"))
             self.vid_download_path = folder_zip_full
