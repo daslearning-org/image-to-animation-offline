@@ -26,7 +26,10 @@ To be added...
 ## 🧑‍💻 Quickstart Guide
 
 ### 📱 Download & Run the Android App
-You can check the [Releases](https://github.com/daslearning-org/image-to-animation-offline/releases) and downlaod the latest version of the android app on your phone.
+Get the app from [Google PlayStore](https://play.google.com/store/apps/details?id=in.daslearning.imgskch) <br>
+[![Google-Play](./docs/images/google_play.svg)](https://play.google.com/store/apps/details?id=in.daslearning.imgskch) <br>
+
+You can also check the [Releases](https://github.com/daslearning-org/image-to-animation-offline/releases) and downlaod the latest version of the android app on your phone.
 
 > If you use the `Download` button from the app, you can save the animation video in one of the mentioned folders: `Downloads`, `Movies`, `Videos` due android file access restrictions on `Android 11+`.
 
