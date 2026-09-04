@@ -170,6 +170,8 @@ class DlImg2SktchApp(MDApp):
     obj_skip_rate = NumericProperty(8)
     bck_skip_rate = NumericProperty(14)
     main_img_duration = NumericProperty(2)
+    fill_speed = NumericProperty(8)
+    gap_px = NumericProperty(4)
     internal_storage = ObjectProperty()
     external_storage = ObjectProperty()
     video_dir = ObjectProperty()
@@ -333,6 +335,60 @@ class DlImg2SktchApp(MDApp):
         else:
             return True
 
+    def permission_callback(self, permissions, results):
+        # results is a list of booleans corresponding to requested permissions
+        usr_deny_flag = False
+        if False in results:
+            # the user checked "Don't ask again" or denied it twice.
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            current_activity = PythonActivity.mActivity
+            # Check rationale status via Android API
+            for permission in permissions:
+                should_show = current_activity.shouldShowRequestPermissionRationale(permission)
+                if not should_show:
+                    usr_deny_flag = True
+                    break
+            if usr_deny_flag:
+                # User denied twice / blocked permanently! Show redirect popup.
+                print("Permission is denied by user!")
+                Clock.schedule_once(lambda dt: self.show_settings_popup())
+
+    def show_settings_popup(self):
+        buttons = [
+            MDFlatButton(
+                text="Cancel",
+                theme_text_color="Custom",
+                text_color=self.theme_cls.primary_color,
+                on_release=self.txt_dialog_closer
+            ),
+            MDFlatButton(
+                text="Open Settings",
+                theme_text_color="Custom",
+                text_color="orange",
+                on_release=self.open_android_settings
+            ),
+        ]
+        self.show_text_dialog(
+            "Permissions Missing",
+            "Please grant the permissions from Settings.",
+            buttons
+        )
+
+    def open_android_settings(self, instance=None):
+        self.txt_dialog_closer()
+        # Target Android Native Intents
+        Intent = autoclass('android.content.Intent')
+        Settings = autoclass('android.provider.Settings')
+        Uri = autoclass('android.net.Uri')
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        # Create intent to open this specific app's settings details
+        activity = PythonActivity.mActivity
+        intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        uri = Uri.fromParts("package", activity.getPackageName(), None)
+        intent.setData(uri)
+        # Launch settings
+        activity.startActivity(intent)
+
     def acquire_wakelock(self):
         if self.wake_lock:
             return  # already acquired
@@ -494,60 +550,6 @@ class DlImg2SktchApp(MDApp):
                 self.is_img_manager_open = True
         except Exception as e:
             self.show_toast_msg(f"Error: {e}", is_error=True)
-
-    def permission_callback(self, permissions, results):
-        # results is a list of booleans corresponding to requested permissions
-        usr_deny_flag = False
-        if False in results:
-            # the user checked "Don't ask again" or denied it twice.
-            PythonActivity = autoclass('org.kivy.android.PythonActivity')
-            current_activity = PythonActivity.mActivity
-            # Check rationale status via Android API
-            for permission in permissions:
-                should_show = current_activity.shouldShowRequestPermissionRationale(permission)
-                if not should_show:
-                    usr_deny_flag = True
-                    break
-            if usr_deny_flag:
-                # User denied twice / blocked permanently! Show redirect popup.
-                print("Permission is denied by user!")
-                Clock.schedule_once(lambda dt: self.show_settings_popup())
-
-    def show_settings_popup(self):
-        buttons = [
-            MDFlatButton(
-                text="Cancel",
-                theme_text_color="Custom",
-                text_color=self.theme_cls.primary_color,
-                on_release=self.txt_dialog_closer
-            ),
-            MDFlatButton(
-                text="Open Settings",
-                theme_text_color="Custom",
-                text_color="orange",
-                on_release=self.open_android_settings
-            ),
-        ]
-        self.show_text_dialog(
-            "Permissions Missing",
-            "Please grant the permissions from Settings.",
-            buttons
-        )
-
-    def open_android_settings(self, instance=None):
-        self.txt_dialog_closer()
-        # Target Android Native Intents
-        Intent = autoclass('android.content.Intent')
-        Settings = autoclass('android.provider.Settings')
-        Uri = autoclass('android.net.Uri')
-        PythonActivity = autoclass('org.kivy.android.PythonActivity')
-        # Create intent to open this specific app's settings details
-        activity = PythonActivity.mActivity
-        intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-        uri = Uri.fromParts("package", activity.getPackageName(), None)
-        intent.setData(uri)
-        # Launch settings
-        activity.startActivity(intent)
 
     def handle_img_selection(self, selection=None):
         '''
@@ -783,7 +785,8 @@ class DlImg2SktchApp(MDApp):
             if self.img_file_count >= 1:
                 #process batch
                 player_box.clear_widgets()
-                player_box.add_widget(TempSpinWait(txt = "Please wait while generating the sketch files (batch)..."))
+                self.tmp_spin_wait = TempSpinWait(txt = "Please wait while generating the sketch files (batch)...")
+                player_box.add_widget(self.tmp_spin_wait)
                 self.batch_progress = MDProgressBar(
                     value = 0,
                     pos_hint = {"center_x": .5, "center_y": .5},
@@ -801,7 +804,19 @@ class DlImg2SktchApp(MDApp):
                 obj_skip_rate = self.root.ids.obj_skip_rate.text if self.root.ids.obj_skip_rate.text != "" else self.obj_skip_rate
                 bck_skip_rate = self.root.ids.bck_skip_rate.text if self.root.ids.bck_skip_rate.text != "" else self.bck_skip_rate
                 main_img_duration = self.root.ids.main_img_duration.text if self.root.ids.main_img_duration.text != "" else self.main_img_duration
-                batch_thread = Thread(target=self.batch_loop, args=(img_file_list, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration)), daemon=True)
+                fill_speed = self.root.ids.fill_speed.text if self.root.ids.fill_speed.text != "" else self.fill_speed
+                gap_px = self.root.ids.gap_px.text if self.root.ids.gap_px.text != "" else self.gap_px
+                batch_thread = Thread(
+                                    target=self.batch_loop,
+                                    args=(
+                                        img_file_list,
+                                        int(frame_rate),
+                                        int(obj_skip_rate),
+                                        int(bck_skip_rate),
+                                        int(main_img_duration)
+                                    ), 
+                                    daemon=True
+                                )
                 batch_thread.start()
             else:
                 self.show_toast_msg("There is no image file in the selected folder!", is_error=True)
@@ -818,6 +833,8 @@ class DlImg2SktchApp(MDApp):
             obj_skip_rate = self.root.ids.obj_skip_rate.text if self.root.ids.obj_skip_rate.text != "" else self.obj_skip_rate
             bck_skip_rate = self.root.ids.bck_skip_rate.text if self.root.ids.bck_skip_rate.text != "" else self.bck_skip_rate
             main_img_duration = self.root.ids.main_img_duration.text if self.root.ids.main_img_duration.text != "" else self.main_img_duration
+            fill_speed = self.root.ids.fill_speed.text if self.root.ids.fill_speed.text != "" else self.fill_speed
+            gap_px = self.root.ids.gap_px.text if self.root.ids.gap_px.text != "" else self.gap_px
             sketch_thread = Thread(
                 target=initiate_sketch, 
                 #args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform, self.end_color), 
@@ -834,6 +851,8 @@ class DlImg2SktchApp(MDApp):
                     "end_color": self.end_color,
                     "draw_hand": self.draw_hand,
                     "max_1080p": self.max_1080p,
+                    "fill_speed": int(fill_speed),
+                    "gap_px": int(gap_px),
                     "progress_callback": self.sketch_prog_updater,
                 },
                 daemon=True
@@ -841,7 +860,8 @@ class DlImg2SktchApp(MDApp):
             sketch_thread.start()
             self.is_cv2_running = True
             player_box.clear_widgets()
-            player_box.add_widget(TempSpinWait(txt = "Please wait while generating the sketch..."))
+            self.tmp_spin_wait = TempSpinWait(txt = "Please wait while generating the sketch...")
+            player_box.add_widget(self.tmp_spin_wait)
             self.sketch_progress = MDProgressBar(
                 value = 0,
                 pos_hint = {"center_x": .5, "center_y": .5},
@@ -854,7 +874,9 @@ class DlImg2SktchApp(MDApp):
                 )
             )
 
-    def batch_loop(self, img_file_list, frame_rate, obj_skip_rate, bck_skip_rate, main_img_duration):
+    def batch_loop(self, img_file_list, frame_rate, obj_skip_rate, bck_skip_rate, main_img_duration,
+                   fill_speed, gap_px
+                   ):
         split_len = self.split_len
         progress_val = 0
         progress_steps = int(100/self.img_file_count)
@@ -877,6 +899,8 @@ class DlImg2SktchApp(MDApp):
                     "end_color": self.end_color,
                     "draw_hand": self.draw_hand,
                     "max_1080p": self.max_1080p,
+                    "fill_speed": int(fill_speed),
+                    "gap_px": int(gap_px),
                     #"progress_callback": self.sketch_prog_updater,
                 },
                 daemon=True
@@ -1007,7 +1031,10 @@ class DlImg2SktchApp(MDApp):
             self.show_toast_msg("No video files were generated in the batch!", is_error=True)
 
     def sketch_prog_updater(self, progress_val):
-        self.sketch_progress.value = progress_val
+        if isinstance(progress_val, int):
+            self.sketch_progress.value = progress_val
+        elif isinstance(progress_val, str):
+            self.tmp_spin_wait.txt = progress_val
 
     def batch_prog_updater(self, progress_val):
         self.batch_progress.value = progress_val
@@ -1031,7 +1058,7 @@ class DlImg2SktchApp(MDApp):
         )
         self.split_len_drp.text = "speed"
         if platform == "android":
-            img_selector_lbl.text = "Use the button to select an image >"
+            img_selector_lbl.text = "Select an image file >"
         else:
             img_selector_lbl.text = "Select an image file or a folder with multiple images (batch) >"
         frame_rate.text = "25"

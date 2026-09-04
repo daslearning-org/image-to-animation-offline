@@ -76,7 +76,7 @@
     MDList:
         adaptive_height: True
         OneLineIconListItem:
-            text: "End Colour"
+            text: "Draw Colour"
             on_release: app.preference_toggle(end_colour, "end_colour")
             IconLeftWidget:
                 id: end_colour
@@ -173,8 +173,8 @@ MDScreen:
         MDGridLayout: # video player
             id: player_box
             cols: 1
-            size_hint_y: 0.5
-            padding: 2, 10, 2, 10 # left, top, right, bottom
+            size_hint_y: 0.4
+            padding: 2, 4, 2, 4 # left, top, right, bottom
             spacing: dp(4)
 
             # video player will be added under this box from main program
@@ -182,16 +182,16 @@ MDScreen:
         MyMDDivider:
             color: (0, 0, 0, 0.25)
 
-        MDGridLayout: # params
+        MDGridLayout: # params main sketch
             cols: 5
             size_hint_y: 0.2
             spacing: dp(4)
-            padding: 2, 10, 2, 10 # left, top, right, bottom
+            padding: 2, 10, 2, 2 # left, top, right, bottom
             ## Split len, Frame rate, Object skip rate, Background skip rate, Original image duration
 
             # hint texts in first row
             MDLabel:
-                text: "Select video speed"
+                text: "Video speed"
                 font_style: 'Caption'
                 size_hint_y: None
                 height: self.texture_size[1]
@@ -263,7 +263,7 @@ MDScreen:
                 text: "14"
                 input_filter: 'int'
                 max_text_length: 2
-                hint_text: "bck skip"
+                hint_text: "bg skip"
                 helper_text: "default: 14"
                 helper_text_mode: "persistent"
                 mode: "rectangle"
@@ -275,8 +275,54 @@ MDScreen:
                 text: "2"
                 input_filter: 'int'
                 max_text_length: 1
-                hint_text: "seconds"
+                hint_text: "sec"
                 helper_text: "default: 2"
+                helper_text_mode: "persistent"
+                mode: "rectangle"
+                size_hint_x: 0.2
+                font_size: sp(14)
+
+        MDGridLayout: # params colour
+            cols: 2
+            size_hint_y: 0.2
+            spacing: dp(4)
+            padding: 2, 2, 2, 10 # left, top, right, bottom
+            ## Colour speed, Gap PX
+
+            # hint texts in first row
+            MDLabel:
+                text: "Colour speed"
+                font_style: 'Caption'
+                size_hint_y: None
+                height: self.texture_size[1]
+                size_hint_x: 0.2
+
+            MDLabel:
+                text: "Colour Gap"
+                font_style: 'Caption'
+                size_hint_y: None
+                height: self.texture_size[1]
+                size_hint_x: 0.2
+
+            MDTextField:
+                id: fill_speed
+                text: "8"
+                input_filter: 'int'
+                max_text_length: 2
+                hint_text: "cl sp"
+                helper_text: "default: 8"
+                helper_text_mode: "persistent"
+                mode: "rectangle"
+                size_hint_x: 0.2
+                font_size: sp(14)
+
+            MDTextField:
+                id: gap_px
+                text: "4"
+                input_filter: 'int'
+                max_text_length: 2
+                hint_text: "px"
+                helper_text: "default: 4"
                 helper_text_mode: "persistent"
                 mode: "rectangle"
                 size_hint_x: 0.2
@@ -284,7 +330,7 @@ MDScreen:
 
         MDGridLayout: # buttons
             cols: 3
-            size_hint_y: 0.2
+            size_hint_y: 0.1
             spacing: dp(4)
             padding: 14, 0, 14, 0 # left, top, right, bottom
 

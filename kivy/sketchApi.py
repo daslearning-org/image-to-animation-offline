@@ -572,6 +572,10 @@ def draw_whiteboard_animations(
             )
             
             print("Running Second Pass: Color...")
+            # Update the UI message
+            if progress_updater:
+                Clock.schedule_once(lambda dt: progress_updater("Colouring your sketch..."))
+
             variables.draw_color = True
             # Make the color pass slightly faster by increasing skip rate by ~1.5x
             original_skip_rate = variables.object_skip_rate
@@ -583,6 +587,7 @@ def draw_whiteboard_animations(
             )
             # Restore original skip rate
             variables.object_skip_rate = original_skip_rate
+
         else:
             draw_masked_object(
                 variables=variables,
@@ -661,9 +666,9 @@ class AllVariables:
         draw_hand=True,
         draw_color=True,
         two_pass=False,
-        fill_speed_multiplier=5,
-        element_mode=False,
-        white_gap_threshold=10,
+        fill_speed_multiplier=8,
+        element_mode=False, # will draw a complete detected element, then moves to next
+        white_gap_threshold=4,
         element_sort_direction="right-top",
         end_color=True,
     ):
@@ -676,7 +681,7 @@ class AllVariables:
         self.end_gray_img_duration_in_sec = end_gray_img_duration_in_sec
         self.draw_hand = draw_hand
         self.draw_color = draw_color
-        self.two_pass = draw_color
+        self.two_pass = two_pass
         self.fill_speed_multiplier = fill_speed_multiplier
         self.element_mode = element_mode
         self.white_gap_threshold = white_gap_threshold
@@ -768,11 +773,22 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
 
 def initiate_sketch(
         image_path, split_len, frame_rate, object_skip_rate, bg_object_skip_rate, main_img_duration, callback, save_path=save_path,
-        which_platform="linux", end_color=True, draw_hand=True, max_1080p=True,
+        which_platform="linux", end_color=True, draw_hand=True, max_1080p=True, fill_speed=8, gap_px=4,
+        draw_color=False,
         progress_callback=None ):
     global platform
     platform = which_platform
     final_result = {"status": False, "message": "Initial load"}
+
+    # set the other params on conditions
+    if end_color:
+        if main_img_duration <= 0:
+            main_img_duration=1
+        if fill_speed <= 0:
+            fill_speed = 8
+        if gap_px <= 0:
+            gap_px = 4
+
     try:
         image_bgr = cv2.imread(image_path)
         mask_path = None # To be added later
@@ -822,6 +838,11 @@ def initiate_sketch(
             bg_object_skip_rate = bg_object_skip_rate,  # assuming background region is larger, hence increasing the skip rate
             end_gray_img_duration_in_sec = main_img_duration,  # the last few secs of the video, for every image will have the entire original image shown as is
             draw_hand=draw_hand,
+            draw_color=draw_color,
+            two_pass=end_color,
+            fill_speed_multiplier=fill_speed,
+            white_gap_threshold=gap_px,
+            end_color=end_color,
         )
 
         # invoking the drawing function
