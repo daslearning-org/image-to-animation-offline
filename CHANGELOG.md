@@ -4,10 +4,16 @@
 - APK for `Android`, EXE for `Windows` & the other file without any extension is for `Linux`. [Documentation Link](https://blog.daslearning.in/llm_ai/genai/image-to-animation.html)
 
 ## Download from App Store(s)
-Get it from [Microsoft App Store](https://apps.microsoft.com/detail/9n2w89c5rb7v?hl=en-GB&gl=IN) <br>
-<img width="267" height="313" alt="image" src="https://github.com/user-attachments/assets/11a46745-e47b-4121-a4bc-ed5ddbfd6c8c" />
+Get the app from [Google PlayStore](https://play.google.com/store/apps/details?id=in.daslearning.imgskch) <br>
+[![Google-Play](https://raw.githubusercontent.com/daslearning-org/image-to-animation-offline/refs/heads/main/docs/images/google_play.svg)](https://play.google.com/store/apps/details?id=in.daslearning.imgskch) <br>
+
+Get the app from [Microsoft App Store](https://apps.microsoft.com/detail/9n2w89c5rb7v?referrer=appbadge&mode=direct&hl=en-GB&gl=IN) <br>
+[![MS-Store](https://raw.githubusercontent.com/daslearning-org/image-to-animation-offline/refs/heads/main/docs/images/ms_store_light.svg)](https://apps.microsoft.com/detail/9n2w89c5rb7v?referrer=appbadge&mode=direct&hl=en-GB&gl=IN) <br>
 
 ## Change Details
+
+## 1.0.0
+- Adding colour sketch option. (Previously it was only B/W)
 
 ## 0.6.2
 - Permission pop-up to take users to `App Settings` if only user has denied two times. [android]
