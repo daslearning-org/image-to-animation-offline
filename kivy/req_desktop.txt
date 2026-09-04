@@ -8,3 +8,4 @@ av
 plyer
 #numpy==1.26.4
 #opencv-python==4.5.1.48
+#cupy-cuda12x
