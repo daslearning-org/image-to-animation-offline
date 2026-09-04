@@ -9,7 +9,7 @@ An open-source, cross-platform, offline app for Android, Linux, Windows, Mac & i
 👉 Available on Android, Windows & Linux. Can run on any OS using `Python`. <br>
 👉 No subscription, watermark, completely `open-source`. <br>
 👉 Configurable speed, frame rate & few other params to control the video lenght & speed. <br>
-👉 We can also choose whether we want to show the original image (colour) or the grayscale (with Gaussian blur) image at the end of the sketch & for how long (in number of seconds). <br>
+👉 Both black & white and colour sketch options are there (First the grayscale sketch, then it will fill the colours). <br>
 👉 Now, we can choose a `folder` to create multiple videos from multiple images (all images in the selected folder) in a single batch (queue) on `desktop` versions only. [Not available on Android] <br>
 
 ## 📽️ Demo
