@@ -12,6 +12,9 @@ Get the app from [Microsoft App Store](https://apps.microsoft.com/detail/9n2w89c
 
 ## Change Details
 
+## 1.0.1
+- Adding `libopenblas` for Android to improve performance.
+
 ## 1.0.0
 - Adding colour sketch option. (Previously it was only B/W)
 
