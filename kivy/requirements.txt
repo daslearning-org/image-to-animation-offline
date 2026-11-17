@@ -1,4 +1,4 @@
-kivymd==1.2.0
+kivymd #==1.2.0 # 2.x requires `sudo apt install libcairo2-dev pkg-config`
 kivy[base]==2.3.1
 numpy
 opencv-python
