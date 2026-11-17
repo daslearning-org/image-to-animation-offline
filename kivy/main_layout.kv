@@ -77,13 +77,22 @@
         adaptive_height: True
         OneLineIconListItem:
             text: "Draw Colour"
-            on_release: app.preference_toggle(end_colour, "end_colour")
+            on_release: app.preference_toggle(draw_color, "draw_color")
             IconLeftWidget:
-                id: end_colour
+                id: draw_color
                 icon: root.end_colour_icon
                 theme_text_color: "Custom"
                 text_color: root.end_colour_icon_colour
-                on_release: app.preference_toggle(self, "end_colour")
+                on_release: app.preference_toggle(self, "draw_color")
+        OneLineIconListItem:
+            text: "Show Main Image"
+            on_release: app.preference_toggle(end_colour, "main_img")
+            IconLeftWidget:
+                id: main_img
+                icon: root.main_img_icon
+                theme_text_color: "Custom"
+                text_color: root.main_img_icon_colour
+                on_release: app.preference_toggle(self, "main_img")
         OneLineIconListItem:
             text: "Hand on Video"
             on_release: app.preference_toggle(draw_hand, "draw_hand")

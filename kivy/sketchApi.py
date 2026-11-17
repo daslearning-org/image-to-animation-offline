@@ -285,10 +285,10 @@ def draw_masked_object(
     line_mask = variables.img_thresh.copy()
     if object_mask is not None:
         line_mask[object_mask == 0] = 255
-    
+
     grid_of_lines = np.array(np.split(line_mask, n_cuts_horizontal, axis=-1))
     grid_of_lines = np.array(np.split(grid_of_lines, n_cuts_vertical, axis=-2))
-    
+
     has_line = (grid_of_lines < black_pixel_threshold) * 1
     has_line = np.sum(np.sum(has_line, axis=-1), axis=-1)
     line_indices = np.array(np.where(has_line > 0)).T
@@ -302,18 +302,18 @@ def draw_masked_object(
         color_mask[img_full_sum >= 750] = 255
         if object_mask is not None:
             color_mask[object_mask == 0] = 255
-            
+
         grid_of_colors = np.array(np.split(color_mask, n_cuts_horizontal, axis=-1))
         grid_of_colors = np.array(np.split(grid_of_colors, n_cuts_vertical, axis=-2))
-        
+
         has_color = (grid_of_colors < black_pixel_threshold) * 1
         has_color = np.sum(np.sum(has_color, axis=-1), axis=-1)
         color_indices = np.array(np.where(has_color > 0)).T
-        
+
         # Separate into unique stages: Outlines first, then Fills
         line_set = set(map(tuple, line_indices))
         fill_indices = np.array([idx for idx in color_indices if tuple(idx) not in line_set])
-        
+
         work_stages = [line_indices, fill_indices]
     else:
         # Grayscale mode: only lines
@@ -383,7 +383,7 @@ def draw_masked_object(
 
             if len(cut_black_indices) == 0:
                 break
-                
+
             # select the next new index
             euc_arr = euc_dist(cut_black_indices, selected_ind_val)
             selected_ind = np.argmin(euc_arr)
@@ -511,10 +511,10 @@ def draw_whiteboard_animations(
             # Draw each element completely before moving to the next
             for idx, element_mask in enumerate(element_masks, 1):
                 print(f"Drawing element {idx}/{len(element_masks)}...")
-                
+
                 if variables.two_pass:
                     # Two Pass mode for this element
-                    print(f"  Pass 1: Drawing edges (element {idx})...")
+                    print(f"Pass 1: Drawing edges (element {idx})...")
                     original_draw_color = variables.draw_color
                     variables.draw_color = False
                     draw_masked_object(
@@ -522,35 +522,35 @@ def draw_whiteboard_animations(
                         object_mask=element_mask,
                         skip_rate=variables.object_skip_rate,
                     )
-                    
-                    print(f"  Pass 2: Filling color (element {idx})...")
+
+                    print(f"Pass 2: Filling color (element {idx})...")
                     variables.draw_color = True
                     # Make the color pass slightly faster
                     original_skip_rate = variables.object_skip_rate
                     variables.object_skip_rate = int(original_skip_rate * 1.5)
-                    
+
                     draw_masked_object(
                         variables=variables,
                         object_mask=element_mask,
                         skip_rate=variables.object_skip_rate,
                     )
-                    
+
                     # Restore original values
                     variables.object_skip_rate = original_skip_rate
                     variables.draw_color = original_draw_color
-                    
+
                 elif variables.end_color and not variables.draw_color:
                     # End Colour mode: draw edges then flash color
-                    print(f"  Drawing edges (element {idx})...")
+                    print(f"Drawing edges (element {idx})...")
                     draw_masked_object(
                         variables=variables,
                         object_mask=element_mask,
                         skip_rate=variables.object_skip_rate,
                     )
-                    
+
                     print(f"  Flashing color (element {idx})...")
                     flash_element_color(variables, element_mask, duration_sec=0.3)
-                    
+
                 else:
                     # Normal draw (with or without color)
                     draw_masked_object(
@@ -562,7 +562,7 @@ def draw_whiteboard_animations(
         # variables.split_len = 15
         # variables.object_skip_rate = 8
         # draw the entire image without any mask
-        
+
         if variables.two_pass:
             print("Running First Pass: Lines...")
             variables.draw_color = False
@@ -570,7 +570,7 @@ def draw_whiteboard_animations(
                 variables=variables,
                 skip_rate=variables.object_skip_rate,
             )
-            
+
             print("Running Second Pass: Color...")
             # Update the UI message
             if progress_updater:
@@ -580,7 +580,7 @@ def draw_whiteboard_animations(
             # Make the color pass slightly faster by increasing skip rate by ~1.5x
             original_skip_rate = variables.object_skip_rate
             variables.object_skip_rate = int(original_skip_rate * 1.5)
-            
+
             draw_masked_object(
                 variables=variables,
                 skip_rate=variables.object_skip_rate,
@@ -662,9 +662,9 @@ class AllVariables:
         split_len=None,
         object_skip_rate=None,
         bg_object_skip_rate=None,
-        end_gray_img_duration_in_sec=None,
+        end_gray_img_duration_in_sec=0,
         draw_hand=True,
-        draw_color=True,
+        draw_color=False,
         two_pass=False,
         fill_speed_multiplier=8,
         element_mode=False, # will draw a complete detected element, then moves to next
@@ -773,21 +773,26 @@ def ffmpeg_convert(source_vid, dest_vid, platform="linux"):
 
 def initiate_sketch(
         image_path, split_len, frame_rate, object_skip_rate, bg_object_skip_rate, main_img_duration, callback, save_path=save_path,
-        which_platform="linux", end_color=True, draw_hand=True, max_1080p=True, fill_speed=8, gap_px=4,
-        draw_color=False,
+        which_platform="linux", draw_hand=True, max_1080p=True, fill_speed=8, gap_px=4,
+        draw_color=False, main_img=False,
         progress_callback=None ):
     global platform
     platform = which_platform
     final_result = {"status": False, "message": "Initial load"}
 
     # set the other params on conditions
-    if end_color:
+    if draw_color:
         if main_img_duration <= 0:
             main_img_duration=1
         if fill_speed <= 0:
             fill_speed = 8
         if gap_px <= 0:
             gap_px = 4
+        main_img = True
+
+    if main_img:
+        if main_img_duration <= 0:
+            main_img_duration=1
 
     try:
         image_bgr = cv2.imread(image_path)
@@ -838,11 +843,11 @@ def initiate_sketch(
             bg_object_skip_rate = bg_object_skip_rate,  # assuming background region is larger, hence increasing the skip rate
             end_gray_img_duration_in_sec = main_img_duration,  # the last few secs of the video, for every image will have the entire original image shown as is
             draw_hand=draw_hand,
-            draw_color=draw_color,
-            two_pass=end_color,
+            draw_color=False,
+            two_pass=draw_color,
             fill_speed_multiplier=fill_speed,
             white_gap_threshold=gap_px,
-            end_color=end_color,
+            end_color=main_img,
         )
 
         # invoking the drawing function
@@ -851,7 +856,7 @@ def initiate_sketch(
         try:
             draw_whiteboard_animations(
                 image_bgr, mask_path, hand_path, hand_mask_path, save_video_path, variables,
-                end_color
+                main_img
             )
             try:
                 ff_stat = ffmpeg_convert(source_vid=save_video_path, dest_vid=ffmpeg_video_path, platform=platform)

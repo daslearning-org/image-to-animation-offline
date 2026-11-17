@@ -12,16 +12,20 @@ Get the app from [Microsoft App Store](https://apps.microsoft.com/detail/9n2w89c
 
 ## Change Details
 
-## 1.0.1
+### 1.0.1
+- Fixing the batch loop on desktop platforms.
+- Bringing back the `Original Image` show option even in B&W mode.
+
+### 1.0.1
 - Adding `libopenblas` for Android to improve performance.
 
-## 1.0.0
+### 1.0.0
 - Adding colour sketch option. (Previously it was only B/W)
 
-## 0.6.2
+### 0.6.2
 - Permission pop-up to take users to `App Settings` if only user has denied two times. [android]
 
-## 0.6.1
+### 0.6.1
 - Adding a check if required permissions are present on clicking `Upload` button. [android]
 
 ### 0.6.0

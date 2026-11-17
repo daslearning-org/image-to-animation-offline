@@ -105,7 +105,7 @@ from screens.divider import MyMDDivider
 from sketchApi import get_split_lens, initiate_sketch
 
 ## Global definitions
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 # Determine the base path for your application's resources
 if getattr(sys, 'frozen', False):
@@ -149,6 +149,8 @@ class BatchStopBtn(MDBoxLayout):
 class PreferencesPop(MDScrollView):
     end_colour_icon = StringProperty("toggle-switch")
     end_colour_icon_colour = StringProperty("green")
+    main_img_icon = StringProperty("toggle-switch")
+    main_img_icon_colour = StringProperty("green")
     draw_hand_icon = StringProperty("toggle-switch")
     draw_hand_icon_colour = StringProperty("green")
     max_1080p_icon = StringProperty("toggle-switch")
@@ -192,7 +194,8 @@ class DlImg2SktchApp(MDApp):
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.accent_palette = "Orange"
         self.batch_process = False
-        self.end_color = True
+        self.draw_color = True
+        self.main_img = True
         self.draw_hand = True
         self.max_1080p = True
         self.old_file_mgr_open = False
@@ -716,15 +719,30 @@ class DlImg2SktchApp(MDApp):
                 self.show_toast_msg(f"Error deleting file: {e}", is_error=True)
 
     def preference_toggle(self, instance, choice):
-        if choice == "end_colour":
-            if self.end_color:
+        if choice == "draw_color":
+            if self.draw_color:
                 self.pref_scroll.end_colour_icon = "toggle-switch-off"
                 self.pref_scroll.end_colour_icon_colour = "gray"
-                self.end_color = False
+                self.draw_color = False
             else:
                 self.pref_scroll.end_colour_icon = "toggle-switch"
                 self.pref_scroll.end_colour_icon_colour = "green"
-                self.end_color = True
+                self.draw_color = True
+                self.pref_scroll.main_img_icon = "toggle-switch"
+                self.pref_scroll.main_img_icon_colour = "green"
+                self.main_img = True
+        elif choice == "main_img":
+            if self.draw_color:
+                self.show_toast_msg("It is also ON if Draw Colour is ON")
+            else:
+                if self.main_img:
+                    self.pref_scroll.main_img_icon = "toggle-switch-off"
+                    self.pref_scroll.main_img_icon_colour = "gray"
+                    self.main_img = False
+                else:
+                    self.pref_scroll.main_img_icon = "toggle-switch"
+                    self.pref_scroll.main_img_icon_colour = "green"
+                    self.main_img = True
         elif choice == "draw_hand":
             if self.draw_hand:
                 self.pref_scroll.draw_hand_icon = "toggle-switch-off"
@@ -813,7 +831,9 @@ class DlImg2SktchApp(MDApp):
                                         int(frame_rate),
                                         int(obj_skip_rate),
                                         int(bck_skip_rate),
-                                        int(main_img_duration)
+                                        int(main_img_duration),
+                                        int(fill_speed),
+                                        int(gap_px)
                                     ), 
                                     daemon=True
                                 )
@@ -837,7 +857,7 @@ class DlImg2SktchApp(MDApp):
             gap_px = self.root.ids.gap_px.text if self.root.ids.gap_px.text != "" else self.gap_px
             sketch_thread = Thread(
                 target=initiate_sketch, 
-                #args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform, self.end_color), 
+                #args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform, self.draw_color), 
                 kwargs={
                     "image_path": self.image_path, 
                     "split_len": split_len, 
@@ -848,7 +868,8 @@ class DlImg2SktchApp(MDApp):
                     "callback": self.task_complete_callback, 
                     "save_path": self.video_dir, 
                     "which_platform": platform, 
-                    "end_color": self.end_color,
+                    "draw_color": self.draw_color,
+                    "main_img": self.main_img,
                     "draw_hand": self.draw_hand,
                     "max_1080p": self.max_1080p,
                     "fill_speed": int(fill_speed),
@@ -874,9 +895,10 @@ class DlImg2SktchApp(MDApp):
                 )
             )
 
-    def batch_loop(self, img_file_list, frame_rate, obj_skip_rate, bck_skip_rate, main_img_duration,
-                   fill_speed, gap_px
-                   ):
+    def batch_loop(
+            self, img_file_list, frame_rate, obj_skip_rate, bck_skip_rate, main_img_duration,
+            fill_speed, gap_px
+        ):
         split_len = self.split_len
         progress_val = 0
         progress_steps = int(100/self.img_file_count)
@@ -885,7 +907,7 @@ class DlImg2SktchApp(MDApp):
             full_img_path = os.path.join(self.image_folder, file)
             sketch_thread = Thread(
                 target=initiate_sketch, 
-                #args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform, self.end_color), 
+                #args=(self.image_path, split_len, int(frame_rate), int(obj_skip_rate), int(bck_skip_rate), int(main_img_duration), self.task_complete_callback, self.video_dir, platform, self.draw_color), 
                 kwargs={
                     "image_path": full_img_path, 
                     "split_len": split_len, 
@@ -896,8 +918,9 @@ class DlImg2SktchApp(MDApp):
                     "callback": self.task_complete_callback, 
                     "save_path": self.video_dir, 
                     "which_platform": platform, 
-                    "end_color": self.end_color,
+                    "draw_color": self.draw_color,
                     "draw_hand": self.draw_hand,
+                    "main_img": self.main_img,
                     "max_1080p": self.max_1080p,
                     "fill_speed": int(fill_speed),
                     "gap_px": int(gap_px),
